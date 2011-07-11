@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="output" path="bin"/>
+	<classpathentry kind="src" path="src/main/java"/>
+	<classpathentry kind="src" path="src/main/resources"/>
+	<classpathentry kind="src" path="src/test/java"/>
+	<classpathentry kind="src" path="src/test/resources"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER" exported="true"/>
+	<classpathentry kind="lib" path="/Users/jack/.gradle/cache/org.apache.tomcat/catalina/jars/catalina-6.0.32.jar" exported="true"/>
+	<classpathentry sourcepath="/Users/jack/.gradle/cache/junit/junit/sources/junit-4.8.2-sources.jar" kind="lib" path="/Users/jack/.gradle/cache/junit/junit/jars/junit-4.8.2.jar" exported="true"/>
+	<classpathentry sourcepath="/Users/jack/.gradle/cache/org.slf4j/slf4j-api/sources/slf4j-api-1.6.1-sources.jar" kind="lib" path="/Users/jack/.gradle/cache/org.slf4j/slf4j-api/jars/slf4j-api-1.6.1.jar" exported="true"/>
+	<classpathentry kind="lib" path="/Users/jack/.gradle/cache/org.apache.tomcat/servlet-api/jars/servlet-api-6.0.32.jar" exported="true"/>
+	<classpathentry kind="lib" path="/Users/jack/.gradle/cache/org.apache.tomcat/juli/jars/juli-6.0.32.jar" exported="true"/>
+	<classpathentry kind="lib" path="/Users/jack/.gradle/cache/org.apache.tomcat/annotations-api/jars/annotations-api-6.0.32.jar" exported="true"/>
+	<classpathentry sourcepath="/Users/jack/.gradle/cache/org.apache.sshd/sshd-core/sources/sshd-core-0.5.0-sources.jar" kind="lib" path="/Users/jack/.gradle/cache/org.apache.sshd/sshd-core/jars/sshd-core-0.5.0.jar" exported="true"/>
+	<classpathentry sourcepath="/Users/jack/.gradle/cache/org.slf4j/slf4j-simple/sources/slf4j-simple-1.6.1-sources.jar" kind="lib" path="/Users/jack/.gradle/cache/org.slf4j/slf4j-simple/jars/slf4j-simple-1.6.1.jar" exported="true"/>
+	<classpathentry sourcepath="/Users/jack/.gradle/cache/org.apache.mina/mina-core/sources/mina-core-2.0.1-sources.jar" kind="lib" path="/Users/jack/.gradle/cache/org.apache.mina/mina-core/bundles/mina-core-2.0.1.jar" exported="true"/>
+</classpath>
