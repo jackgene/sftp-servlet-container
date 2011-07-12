@@ -17,9 +17,15 @@ repositories {
 dependencies {
     compile(
         [group: 'org.apache.sshd', name: 'sshd-core', version: '0.5.0'],
-        [group: 'org.apache.tomcat', name: 'catalina', version: '6.0.+'],
+        [group: 'org.apache.tomcat', name: 'coyote', version: '6.0.+'],
         [group: 'org.slf4j', name: 'slf4j-simple', version: '1.6.+']
     )
+    runtime(
+        [group: 'org.apache.tomcat', name: 'jasper', version: '6.0.+']
+    ) {
+        // TODO
+        exclude module: 'ecj'
+    }
     testCompile(
         [group: 'junit', name: 'junit', version: '4.+']
     )
