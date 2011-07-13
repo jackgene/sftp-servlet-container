@@ -247,17 +247,19 @@ public class SftpProtocol implements ProtocolHandler {
             InputStream is;
             
             if (httpStatus == 200) {
-                is = new ByteArrayInputStream(
-                    contents.getBuffer(), (int)offset, contents.getLength());
+                is = new ByteArrayInputStream(contents.getBuffer(),
+                    contents.getStart(), contents.getLength());
             } else if ("README.txt".equals(getName())) {
                 is = getClass().getResourceAsStream("README.txt");
+            } else {
+                is = null;
+            }
+            if (is != null) {
                 try {
                     is.skip(offset);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-            } else {
-                is = null;
             }
             
             return is;
