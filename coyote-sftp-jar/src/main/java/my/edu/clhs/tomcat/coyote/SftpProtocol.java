@@ -88,7 +88,7 @@ public class SftpProtocol implements ProtocolHandler {
         private int httpStatus = 404;
         private ByteChunk contents = new ByteChunk();
         
-        public SftpServletFile(String path) {
+        public SftpServletFile(String path, String userName) {
             if (path == null || path.equals(".")) {
                 absolutePath = "/";
             } else if (path.startsWith("/")) {
@@ -124,6 +124,9 @@ public class SftpProtocol implements ProtocolHandler {
                 request.protocol().setString(Constants.HTTP_11);
                 request.method().setString(Constants.GET);
                 request.requestURI().setString(path);
+                if (userName != null) {
+                    request.getRemoteUser().setString(userName);
+                }
                 
                 rp.setStage(org.apache.coyote.Constants.STAGE_SERVICE);
                 try {
@@ -168,7 +171,7 @@ public class SftpProtocol implements ProtocolHandler {
         
         public List<SshFile> listSshFiles() {
             return Collections.singletonList(
-                (SshFile)new SftpServletFile("README.txt"));
+                (SshFile)new SftpServletFile("README.txt", null));
         }
         
         public boolean isWritable() {
@@ -301,10 +304,10 @@ public class SftpProtocol implements ProtocolHandler {
             }
         });
         endpoint.setFileSystemFactory(new FileSystemFactory() {
-            public FileSystemView createFileSystemView(String userName) {
+            public FileSystemView createFileSystemView(final String userName) {
                 return new FileSystemView() {
                     public SshFile getFile(String file) {
-                        return new SftpServletFile(file);
+                        return new SftpServletFile(file, userName);
                     }
                 };
             }
