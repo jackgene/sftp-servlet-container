@@ -2,12 +2,9 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 
 sourceCompatibility = 1.5
-version = '1.0'
+version = '0.0-SNAPSHOT'
 jar {
-    baseName = 'tardis'
-    manifest {
-        attributes 'Main-Class': 'my.edu.clhs.servlet.sftp.POC'
-    }
+    baseName = 'coyote-sftp'
 }
 
 repositories {
