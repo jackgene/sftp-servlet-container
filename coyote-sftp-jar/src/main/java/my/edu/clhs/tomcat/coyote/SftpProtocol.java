@@ -17,6 +17,7 @@
  */
 package my.edu.clhs.tomcat.coyote;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -28,7 +29,13 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.coyote.Adapter;
+import org.apache.coyote.InputBuffer;
+import org.apache.coyote.OutputBuffer;
 import org.apache.coyote.ProtocolHandler;
+import org.apache.coyote.Request;
+import org.apache.coyote.RequestInfo;
+import org.apache.coyote.Response;
+import org.apache.coyote.http11.Constants;
 import org.apache.sshd.SshServer;
 import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.common.util.SecurityUtils;
@@ -43,6 +50,7 @@ import org.apache.sshd.server.keyprovider.PEMGeneratorHostKeyProvider;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.sftp.SftpSubsystem;
+import org.apache.tomcat.util.buf.ByteChunk;
 
 /**
  * {@link ProtocolHandler} for the SSH File Transfer Protocol.
@@ -77,6 +85,9 @@ public class SftpProtocol implements ProtocolHandler {
     public void setPort(int port) { endpoint.setPort(port); }
     
     private class SftpServletFile implements SshFile {
+        private int httpStatus = 404;
+        private ByteChunk contents = new ByteChunk();
+        
         public SftpServletFile(String path) {
             if (path == null || path.equals(".")) {
                 absolutePath = "/";
@@ -84,6 +95,46 @@ public class SftpProtocol implements ProtocolHandler {
                 absolutePath = path;
             } else {
                 absolutePath = "/" + path;
+            }
+            
+            if (!absolutePath.endsWith("/")) {
+                InputBuffer inputBuffer = new InputBuffer() {
+                    public int doRead(ByteChunk chunk, Request request)
+                            throws IOException {
+                        return 0;
+                    }
+                };
+                Request request = new Request();
+                request.setInputBuffer(inputBuffer);
+                
+                OutputBuffer outputBuffer = new OutputBuffer() {
+                    public int doWrite(ByteChunk chunk, Response response)
+                            throws IOException {
+                        contents.append(chunk);
+                        return chunk.getLength();
+                    }
+                };
+                Response response = new Response();
+                response.setOutputBuffer(outputBuffer);
+                
+                RequestInfo rp = request.getRequestProcessor();
+                rp.setStage(org.apache.coyote.Constants.STAGE_PREPARE);
+                request.scheme().setString("http");
+                request.serverName().setString(endpoint.getHost());
+                request.protocol().setString(Constants.HTTP_11);
+                request.method().setString(Constants.GET);
+                request.requestURI().setString(path);
+                
+                rp.setStage(org.apache.coyote.Constants.STAGE_SERVICE);
+                try {
+                    adapter.service(request, response);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                
+                rp.setStage(org.apache.coyote.Constants.STAGE_ENDED);
+                
+                httpStatus = response.getStatus();
             }
         }
         
@@ -133,11 +184,11 @@ public class SftpProtocol implements ProtocolHandler {
         }
         
         public boolean isFile() {
-            return "README.txt".equals(getName());
+            return httpStatus == 200 || "README.txt".equals(getName());
         }
         
         public boolean isDirectory() {
-            return !"README.txt".equals(getName());
+            return !isFile();
         }
         
         public void handleClose() throws IOException {
@@ -147,9 +198,12 @@ public class SftpProtocol implements ProtocolHandler {
         public long getSize() {
             int size = 0;
             
-            if ("README.txt".equals(getName())) {
+            if (httpStatus == 200) {
+                size = contents.getLength();
+            } else if ("README.txt".equals(getName())) {
                 InputStream is = getClass().getResourceAsStream("README.txt");
                 try {
+                    // TODO WTF?
                     size = is.available();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -189,7 +243,10 @@ public class SftpProtocol implements ProtocolHandler {
         public InputStream createInputStream(long offset) throws IOException {
             InputStream is;
             
-            if ("README.txt".equals(getName())) {
+            if (httpStatus == 200) {
+                is = new ByteArrayInputStream(
+                    contents.getBuffer(), (int)offset, contents.getLength());
+            } else if ("README.txt".equals(getName())) {
                 is = getClass().getResourceAsStream("README.txt");
                 try {
                     is.skip(offset);
