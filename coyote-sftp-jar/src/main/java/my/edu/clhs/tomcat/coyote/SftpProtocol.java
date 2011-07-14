@@ -119,9 +119,9 @@ public class SftpProtocol implements ProtocolHandler {
                 
                 RequestInfo rp = request.getRequestProcessor();
                 rp.setStage(org.apache.coyote.Constants.STAGE_PREPARE);
-                request.scheme().setString("http");
+                request.scheme().setString("sftp");
                 request.serverName().setString(endpoint.getHost());
-                request.protocol().setString(Constants.HTTP_11);
+                request.protocol().setString("SFTP");
                 request.method().setString(Constants.GET);
                 request.requestURI().setString(path);
                 if (userName != null) {
@@ -240,7 +240,12 @@ public class SftpProtocol implements ProtocolHandler {
         }
         
         public OutputStream createOutputStream(long offset) throws IOException {
-            throw new UnsupportedOperationException();
+            return new OutputStream() {
+                @Override
+                public void write(int b) throws IOException {
+                    // do nothing
+                }
+            };
         }
         
         public InputStream createInputStream(long offset) throws IOException {
@@ -324,11 +329,11 @@ public class SftpProtocol implements ProtocolHandler {
     }
     
     public void pause() throws Exception {
-        throw new UnsupportedOperationException();
+        endpoint.stop();
     }
     
     public void resume() throws Exception {
-        throw new UnsupportedOperationException();
+        endpoint.start();
     }
     
     public void destroy() throws Exception {
