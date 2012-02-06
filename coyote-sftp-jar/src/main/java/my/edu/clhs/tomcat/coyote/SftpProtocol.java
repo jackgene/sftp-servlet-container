@@ -63,14 +63,17 @@ public class SftpProtocol implements ProtocolHandler {
     
     private HashMap<String,Object> attributes = new HashMap<String,Object>();
     
+    // @Override - ProtocolHandler
     public Object getAttribute(String name) {
         return attributes.get(name);
     }
     
+    // @Override - ProtocolHandler
     public void setAttribute(String name, Object value) {
         attributes.put(name, value);
     }
     
+    // @Override - ProtocolHandler
     public Iterator<?> getAttributeNames() {
         return attributes.keySet().iterator();
     }
@@ -79,7 +82,9 @@ public class SftpProtocol implements ProtocolHandler {
      * The adapter, used to call the connector.
      */
     private Adapter adapter;
+    // @Override - ProtocolHandler
     public Adapter getAdapter() { return adapter; }
+    // @Override - ProtocolHandler
     public void setAdapter(Adapter adapter) { this.adapter = adapter; }
     
     public int getPort() { return endpoint.getPort(); }
@@ -325,18 +330,22 @@ public class SftpProtocol implements ProtocolHandler {
             new SftpSubsystem.Factory()));
     }
     
+    // @Override - ProtocolHandler
     public void start() throws Exception {
         endpoint.start();
     }
     
+    // @Override - ProtocolHandler
     public void pause() throws Exception {
         endpoint.stop();
     }
     
+    // @Override - ProtocolHandler
     public void resume() throws Exception {
         endpoint.start();
     }
     
+    // @Override - ProtocolHandler
     public void destroy() throws Exception {
         endpoint.stop(true);
     }
