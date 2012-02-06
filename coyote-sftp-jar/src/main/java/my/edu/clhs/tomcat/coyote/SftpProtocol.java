@@ -141,7 +141,7 @@ public class SftpProtocol implements ProtocolHandler {
                 request.scheme().setString("sftp");
                 request.serverName().setString(endpoint.getHost());
                 request.protocol().setString("SFTP");
-                request.method().setString(Constants.GET);
+                request.method().setString(Constants.GET); // TODO HEAD here, GET later?
                 request.requestURI().setString(path);
                 if (userName != null) {
                     request.getRemoteUser().setString(userName);
@@ -174,6 +174,7 @@ public class SftpProtocol implements ProtocolHandler {
         
         public void truncate() throws IOException {
             // do nothing
+            // TODO implement for HTTP DELETE.
         }
         
         public boolean setLastModified(long time) {
@@ -234,11 +235,11 @@ public class SftpProtocol implements ProtocolHandler {
         }
         
         public long getLastModified() {
-            return System.currentTimeMillis();
+            return System.currentTimeMillis(); // TODO servlet's last modified
         }
         
         public boolean doesExist() {
-            return true;
+            return true; // TODO only on HTTP 200? "readme"?
         }
         
         public boolean delete() {
@@ -250,6 +251,7 @@ public class SftpProtocol implements ProtocolHandler {
                 @Override
                 public void write(int b) throws IOException {
                     // do nothing
+                    // TODO implement for HTTP PUT? POST?
                 }
             };
         }
