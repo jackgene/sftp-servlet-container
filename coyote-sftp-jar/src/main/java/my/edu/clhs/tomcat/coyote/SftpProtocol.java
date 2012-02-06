@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.URL;
 import java.security.PublicKey;
 import java.util.Collections;
 import java.util.HashMap;
@@ -83,6 +84,19 @@ public class SftpProtocol implements ProtocolHandler {
     
     public int getPort() { return endpoint.getPort(); }
     public void setPort(int port) { endpoint.setPort(port); }
+    
+    private static final String README_FILENAME = "README.txt";
+    private static final URL README_FILE_URL =
+        SftpServletFile.class.getResource(README_FILENAME);
+    private static final int README_FILE_SIZE;
+    static {
+        try {
+            README_FILE_SIZE = README_FILE_URL.
+                openConnection().getContentLength();
+        } catch (IOException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
     
     private class SftpServletFile implements SshFile {
         private int httpStatus = 404;
@@ -171,7 +185,7 @@ public class SftpProtocol implements ProtocolHandler {
         
         public List<SshFile> listSshFiles() {
             return Collections.singletonList(
-                (SshFile)new SftpServletFile("README.txt", null));
+                (SshFile)new SftpServletFile(README_FILENAME, null));
         }
         
         public boolean isWritable() {
@@ -187,7 +201,7 @@ public class SftpProtocol implements ProtocolHandler {
         }
         
         public boolean isFile() {
-            return httpStatus == 200 || "README.txt".equals(getName());
+            return httpStatus == 200 || README_FILENAME.equals(getName());
         }
         
         public boolean isDirectory() {
@@ -203,28 +217,15 @@ public class SftpProtocol implements ProtocolHandler {
             
             if (httpStatus == 200) {
                 size = contents.getLength();
-            } else if ("README.txt".equals(getName())) {
-                InputStream is = getClass().getResourceAsStream("README.txt");
-                try {
-                    // TODO WTF?
-                    size = is.available();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                } finally {
-                    try {
-                        is.close();
-                    } catch (IOException e) {
-                        // whatever
-                    }
-                }
+            } else if (README_FILENAME.equals(getName())) {
+                size = README_FILE_SIZE;
             }
             
             return size;
         }
         
         public SshFile getParentFile() {
-            // TODO Auto-generated method stub
-            return null;
+            throw new UnsupportedOperationException();
         }
         
         public long getLastModified() {
@@ -254,8 +255,8 @@ public class SftpProtocol implements ProtocolHandler {
             if (httpStatus == 200) {
                 is = new ByteArrayInputStream(contents.getBuffer(),
                     contents.getStart(), contents.getLength());
-            } else if ("README.txt".equals(getName())) {
-                is = getClass().getResourceAsStream("README.txt");
+            } else if (README_FILENAME.equals(getName())) {
+                is = README_FILE_URL.openStream();
             } else {
                 is = null;
             }
