@@ -8,7 +8,7 @@ Syntax: regexp
 ^.*/bin$
 
 # Misc
-^coyote-sftp-jar/key\.ser$
+^coyote-sftp-jar/testServer/key\.ser$
 
 # MacOS
 \.DS_Store$
