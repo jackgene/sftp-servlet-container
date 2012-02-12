@@ -24,6 +24,9 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.security.PublicKey;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -52,6 +55,7 @@ import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.sftp.SftpSubsystem;
 import org.apache.tomcat.util.buf.ByteChunk;
+import org.apache.tomcat.util.http.MimeHeaders;
 
 /**
  * {@link ProtocolHandler} for the SSH File Transfer Protocol.
@@ -90,6 +94,8 @@ public class SftpProtocol implements ProtocolHandler {
     public int getPort() { return endpoint.getPort(); }
     public void setPort(int port) { endpoint.setPort(port); }
     
+    private static final DateFormat HTTP_DATE_FORMAT =
+        new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
     private static final String README_FILENAME = "README.txt";
     private static final URL README_FILE_URL =
         SftpServletFile.class.getResource(README_FILENAME);
@@ -104,7 +110,8 @@ public class SftpProtocol implements ProtocolHandler {
     }
     
     private class SftpServletFile implements SshFile {
-        private int httpStatus = 404;
+        private final int httpStatus;
+        private final MimeHeaders httpHeaders;
         private ByteChunk contents = new ByteChunk();
         
         public SftpServletFile(String path, String userName) {
@@ -157,6 +164,10 @@ public class SftpProtocol implements ProtocolHandler {
                 rp.setStage(org.apache.coyote.Constants.STAGE_ENDED);
                 
                 httpStatus = response.getStatus();
+                httpHeaders = response.getMimeHeaders();
+            } else {
+                httpStatus = 404;
+                httpHeaders = new MimeHeaders();
             }
         }
         
@@ -235,7 +246,25 @@ public class SftpProtocol implements ProtocolHandler {
         }
         
         public long getLastModified() {
-            return System.currentTimeMillis(); // TODO servlet's last modified
+            try {
+                if (README_FILENAME.equals(getName())) {
+                    return README_FILE_URL.openConnection().getLastModified();
+                } else {
+                    String lastModified =
+                        httpHeaders.getHeader("Last-Modified");
+                    
+                    if (lastModified != null) {
+                        return HTTP_DATE_FORMAT.
+                            parse(lastModified).getTime();
+                    }
+                    
+                    return System.currentTimeMillis();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
         }
         
         public boolean doesExist() {
