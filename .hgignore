@@ -9,3 +9,6 @@ Syntax: regexp
 
 # Misc
 ^coyote-sftp-jar/key\.ser$
+
+# MacOS
+\.DS_Store$
