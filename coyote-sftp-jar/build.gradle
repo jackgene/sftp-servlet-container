@@ -28,4 +28,12 @@ dependencies {
     )
 }
 
+task runTestServer(type: JavaExec, depends: classes) {
+    main = 'org.apache.catalina.startup.Catalina'
+    args 'start'
+    workingDir = project.projectDir.absolutePath + '/testServer'
+    classpath configurations.runtime
+    classpath sourceSets.main.output.classesDir
+}
+
 task wrapper(type: Wrapper)
