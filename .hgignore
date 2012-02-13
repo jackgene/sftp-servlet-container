@@ -5,6 +5,7 @@ Syntax: regexp
 
 # Eclipse
 ^.*/\.classpath$
+^.*/\.settings$
 ^.*/bin$
 
 # Misc
