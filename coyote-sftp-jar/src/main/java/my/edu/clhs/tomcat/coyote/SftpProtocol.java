@@ -17,10 +17,11 @@
  */
 package my.edu.clhs.tomcat.coyote;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.security.PublicKey;
@@ -114,7 +115,6 @@ public class SftpProtocol implements ProtocolHandler {
         private final int httpStatus;
         private final MimeHeaders httpHeaders;
         private final long contentLength;
-        private ByteChunk contents = new ByteChunk();
         
         /**
          * Submit a request to be serviced by Coyote.
@@ -125,7 +125,7 @@ public class SftpProtocol implements ProtocolHandler {
          * @param outputBuffer response contents.
          * @return response objects (containing header information).
          */
-        private Response service(String path, String method,
+        private Response service(String method,
                 InputBuffer inputBuffer, OutputBuffer outputBuffer) {
             Request request = new Request();
             request.setInputBuffer(inputBuffer);
@@ -139,7 +139,7 @@ public class SftpProtocol implements ProtocolHandler {
             request.serverName().setString(endpoint.getHost());
             request.protocol().setString("SFTP");
             request.method().setString(method);
-            request.requestURI().setString(path);
+            request.requestURI().setString(absolutePath);
             if (userName != null) {
                 request.getRemoteUser().setString(userName);
             }
@@ -151,7 +151,8 @@ public class SftpProtocol implements ProtocolHandler {
                 adapter.service(request, response);
             } catch (Exception e) {
                 throw new RuntimeException(
-                    "An error occurred when " + userName + " requested " + path,
+                    "An error occurred when " +
+                    userName + " requested " + absolutePath,
                     e);
             }
             
@@ -170,12 +171,6 @@ public class SftpProtocol implements ProtocolHandler {
             }
             
             if (!absolutePath.endsWith("/")) {
-                InputBuffer inputBuffer = new InputBuffer() {
-                    public int doRead(ByteChunk chunk, Request request)
-                            throws IOException {
-                        return chunk.getLength();
-                    }
-                };
                 OutputBuffer outputBuffer = new OutputBuffer() {
                     public int doWrite(ByteChunk chunk, Response response)
                             throws IOException {
@@ -183,8 +178,7 @@ public class SftpProtocol implements ProtocolHandler {
                     }
                 };
                 
-                Response response = service(
-                    path, Constants.HEAD, inputBuffer, outputBuffer);
+                Response response = service(Constants.HEAD, null, outputBuffer);
                 
                 httpStatus = response.getStatus();
                 contentLength = response.getContentLengthLong();
@@ -314,8 +308,33 @@ public class SftpProtocol implements ProtocolHandler {
             InputStream is;
             
             if (httpStatus == 200) {
-                is = new ByteArrayInputStream(contents.getBuffer(),
-                    contents.getStart(), contents.getLength());
+                is = new PipedInputStream();
+                final OutputStream pos =
+                    new PipedOutputStream((PipedInputStream)is);
+                
+                new Thread(new Runnable() {
+                    public void run() {
+                        OutputBuffer outputBuffer = new OutputBuffer() {
+                            public int doWrite(
+                                    ByteChunk chunk, Response response)
+                                    throws IOException {
+                                pos.write(chunk.getBuffer(),
+                                    chunk.getStart(), chunk.getLength());
+                                return chunk.getLength();
+                            }
+                        };
+                        
+                        try {
+                            service(Constants.GET, null, outputBuffer);
+                        } finally {
+                            try {
+                                pos.close();
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    }
+                }).start();
             } else if (README_FILENAME.equals(getName())) {
                 is = README_FILE_URL.openStream();
             } else {
