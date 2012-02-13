@@ -110,11 +110,57 @@ public class SftpProtocol implements ProtocolHandler {
     }
     
     private class SftpServletFile implements SshFile {
+        private final String userName;
         private final int httpStatus;
         private final MimeHeaders httpHeaders;
+        private final long contentLength;
         private ByteChunk contents = new ByteChunk();
         
+        /**
+         * Submit a request to be serviced by Coyote.
+         * 
+         * @param path request path.
+         * @param method request method.
+         * @param inputBuffer PUT/POST contents.
+         * @param outputBuffer response contents.
+         * @return response objects (containing header information).
+         */
+        private Response service(String path, String method,
+                InputBuffer inputBuffer, OutputBuffer outputBuffer) {
+            Request request = new Request();
+            request.setInputBuffer(inputBuffer);
+            
+            Response response = new Response();
+            response.setOutputBuffer(outputBuffer);
+            
+            RequestInfo rp = request.getRequestProcessor();
+            rp.setStage(org.apache.coyote.Constants.STAGE_PREPARE);
+            request.scheme().setString("sftp");
+            request.serverName().setString(endpoint.getHost());
+            request.protocol().setString("SFTP");
+            request.method().setString(method);
+            request.requestURI().setString(path);
+            if (userName != null) {
+                request.getRemoteUser().setString(userName);
+            }
+            request.setResponse(response);
+            response.setRequest(request);
+            
+            rp.setStage(org.apache.coyote.Constants.STAGE_SERVICE);
+            try {
+                adapter.service(request, response);
+            } catch (Exception e) {
+                throw new RuntimeException(
+                    "An error occurred when " + userName + " requested " + path,
+                    e);
+            }
+            
+            rp.setStage(org.apache.coyote.Constants.STAGE_ENDED);
+            return response;
+        }
+        
         public SftpServletFile(String path, String userName) {
+            this.userName = userName;
             if (path == null || path.equals(".")) {
                 absolutePath = "/";
             } else if (path.startsWith("/")) {
@@ -127,46 +173,25 @@ public class SftpProtocol implements ProtocolHandler {
                 InputBuffer inputBuffer = new InputBuffer() {
                     public int doRead(ByteChunk chunk, Request request)
                             throws IOException {
-                        return 0;
-                    }
-                };
-                Request request = new Request();
-                request.setInputBuffer(inputBuffer);
-                
-                OutputBuffer outputBuffer = new OutputBuffer() {
-                    public int doWrite(ByteChunk chunk, Response response)
-                            throws IOException {
-                        contents.append(chunk);
                         return chunk.getLength();
                     }
                 };
-                Response response = new Response();
-                response.setOutputBuffer(outputBuffer);
+                OutputBuffer outputBuffer = new OutputBuffer() {
+                    public int doWrite(ByteChunk chunk, Response response)
+                            throws IOException {
+                        return chunk.getLength();
+                    }
+                };
                 
-                RequestInfo rp = request.getRequestProcessor();
-                rp.setStage(org.apache.coyote.Constants.STAGE_PREPARE);
-                request.scheme().setString("sftp");
-                request.serverName().setString(endpoint.getHost());
-                request.protocol().setString("SFTP");
-                request.method().setString(Constants.GET); // TODO HEAD here, GET later?
-                request.requestURI().setString(path);
-                if (userName != null) {
-                    request.getRemoteUser().setString(userName);
-                }
-                
-                rp.setStage(org.apache.coyote.Constants.STAGE_SERVICE);
-                try {
-                    adapter.service(request, response);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-                
-                rp.setStage(org.apache.coyote.Constants.STAGE_ENDED);
+                Response response = service(
+                    path, Constants.HEAD, inputBuffer, outputBuffer);
                 
                 httpStatus = response.getStatus();
+                contentLength = response.getContentLengthLong();
                 httpHeaders = response.getMimeHeaders();
             } else {
                 httpStatus = 404;
+                contentLength = 0;
                 httpHeaders = new MimeHeaders();
             }
         }
@@ -202,7 +227,7 @@ public class SftpProtocol implements ProtocolHandler {
         
         public List<SshFile> listSshFiles() {
             return Collections.singletonList(
-                (SshFile)new SftpServletFile(README_FILENAME, null));
+                (SshFile)new SftpServletFile(README_FILENAME, userName));
         }
         
         public boolean isWritable() {
@@ -230,10 +255,10 @@ public class SftpProtocol implements ProtocolHandler {
         }
         
         public long getSize() {
-            int size = 0;
+            long size = 0;
             
             if (httpStatus == 200) {
-                size = contents.getLength();
+                size = contentLength;
             } else if (README_FILENAME.equals(getName())) {
                 size = README_FILE_SIZE;
             }
