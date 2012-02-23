@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
+import static org.apache.catalina.connector.Response.*;
 import org.apache.coyote.Adapter;
 import org.apache.coyote.InputBuffer;
 import org.apache.coyote.OutputBuffer;
@@ -184,7 +185,7 @@ public class SftpProtocol implements ProtocolHandler {
                 contentLength = response.getContentLengthLong();
                 httpHeaders = response.getMimeHeaders();
             } else {
-                httpStatus = 404;
+                httpStatus = SC_NOT_FOUND;
                 contentLength = 0;
                 httpHeaders = new MimeHeaders();
             }
@@ -204,7 +205,6 @@ public class SftpProtocol implements ProtocolHandler {
         
         public void truncate() throws IOException {
             // do nothing
-            // TODO implement for HTTP DELETE.
         }
         
         public boolean setLastModified(long time) {
@@ -237,7 +237,7 @@ public class SftpProtocol implements ProtocolHandler {
         }
         
         public boolean isFile() {
-            return httpStatus == 200 || README_FILENAME.equals(getName());
+            return httpStatus == SC_OK || README_FILENAME.equals(getName());
         }
         
         public boolean isDirectory() {
@@ -251,7 +251,7 @@ public class SftpProtocol implements ProtocolHandler {
         public long getSize() {
             long size = 0;
             
-            if (httpStatus == 200) {
+            if (httpStatus == SC_OK) {
                 size = contentLength;
             } else if (README_FILENAME.equals(getName())) {
                 size = README_FILE_SIZE;
@@ -287,27 +287,50 @@ public class SftpProtocol implements ProtocolHandler {
         }
         
         public boolean doesExist() {
-            return true; // TODO only on HTTP 200? "readme"?
+            return true; // TODO this makes it HttpServlet compatible.
         }
         
         public boolean delete() {
+            // TODO implement for HTTP DELETE.
             return false;
         }
         
         public OutputStream createOutputStream(long offset) throws IOException {
-            return new OutputStream() {
-                @Override
-                public void write(int b) throws IOException {
-                    // do nothing
-                    // TODO implement for HTTP PUT? POST?
+            PipedOutputStream os = new PipedOutputStream();
+            final PipedInputStream is = new PipedInputStream(os);
+            
+            new Thread(new Runnable() {
+                public void run() {
+                    InputBuffer inputBuffer = new InputBuffer() {
+                        public int doRead(ByteChunk chunk, Request request)
+                                throws IOException {
+                            byte[] buffer = new byte[1024];
+                            int len = is.read(buffer);
+                            chunk.setBytes(buffer, 0, len);
+                            
+                            return len;
+                        }
+                    };
+                    OutputBuffer outputBuffer = new OutputBuffer() {
+                        public int doWrite(
+                                ByteChunk chunk, Response response)
+                                throws IOException {
+                            // Do nothing
+                            return chunk.getLength();
+                        }
+                    };
+                    
+                    service("PUT", inputBuffer, outputBuffer);
                 }
-            };
+            }).start();
+            
+            return os;
         }
         
         public InputStream createInputStream(long offset) throws IOException {
             InputStream is;
             
-            if (httpStatus == 200) {
+            if (httpStatus == SC_OK) {
                 is = new PipedInputStream();
                 final OutputStream pos =
                     new PipedOutputStream((PipedInputStream)is);
