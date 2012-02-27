@@ -193,61 +193,76 @@ public class SftpProtocol implements ProtocolHandler {
         
         private String absolutePath;
         
+        // @Override
         public String getAbsolutePath() {
             return absolutePath;
         }
         
+        // @Override
         public String getName() {
             int lastSlashIdx = absolutePath.lastIndexOf('/');
             return lastSlashIdx >= 0 ?
                 absolutePath.substring(lastSlashIdx + 1) : absolutePath;
         }
         
+        // @Override
         public void truncate() throws IOException {
             // do nothing
         }
         
+        // @Override
         public boolean setLastModified(long time) {
             return false;
         }
         
+        // @Override
         public boolean move(SshFile destination) {
             return false;
         }
         
+        // @Override
         public boolean mkdir() {
             return false;
         }
         
+        // @Override
         public List<SshFile> listSshFiles() {
+            // TODO use absolute paths when creating files.
             return Collections.singletonList(
                 (SshFile)new SftpServletFile(README_FILENAME, userName));
         }
         
+        // @Override
         public boolean isWritable() {
             return false;
         }
         
+        // @Override
         public boolean isRemovable() {
             return false;
         }
         
+        // @Override
         public boolean isReadable() {
             return true;
         }
         
+        // @Override
         public boolean isFile() {
             return httpStatus == SC_OK || README_FILENAME.equals(getName());
         }
         
+        // @Override
         public boolean isDirectory() {
             return !isFile();
         }
         
+        // @Override
         public void handleClose() throws IOException {
             // do nothing
         }
         
+        // @Override
         public long getSize() {
             long size = 0;
             
@@ -260,10 +275,12 @@ public class SftpProtocol implements ProtocolHandler {
             return size;
         }
         
+        // @Override
         public SshFile getParentFile() {
             throw new UnsupportedOperationException();
         }
         
+        // @Override
         public long getLastModified() {
             try {
                 if (README_FILENAME.equals(getName())) {
@@ -286,15 +303,18 @@ public class SftpProtocol implements ProtocolHandler {
             }
         }
         
+        // @Override
         public boolean doesExist() {
             return true; // TODO this makes it HttpServlet compatible.
         }
         
+        // @Override
         public boolean delete() {
             // TODO implement for HTTP DELETE.
             return false;
         }
         
+        // @Override
         public OutputStream createOutputStream(long offset) throws IOException {
             PipedOutputStream os = new PipedOutputStream();
             final PipedInputStream is = new PipedInputStream(os);
@@ -327,6 +347,7 @@ public class SftpProtocol implements ProtocolHandler {
             return os;
         }
         
+        // @Override
         public InputStream createInputStream(long offset) throws IOException {
             InputStream is;
             
@@ -384,31 +405,37 @@ public class SftpProtocol implements ProtocolHandler {
                 new SimpleGeneratorHostKeyProvider("key.ser"));
         }
         endpoint.setPasswordAuthenticator(new PasswordAuthenticator() {
+            // @Override
             public boolean authenticate(
                     String username, String password, ServerSession session) {
                 return username != null && username.equals(password);
             }
         });
         endpoint.setPublickeyAuthenticator(new PublickeyAuthenticator() {
+            // @Override
             public boolean authenticate(
                     String username, PublicKey key, ServerSession session) {
                 return true;
             }
         });
         endpoint.setForwardingFilter(new ForwardingFilter() {
+            // @Override
             public boolean canForwardAgent(ServerSession session) {
                 return true;
             }
             
+            // @Override
             public boolean canForwardX11(ServerSession session) {
                 return true;
             }
             
+            // @Override
             public boolean canListen(
                     InetSocketAddress address, ServerSession session) {
                 return true;
             }
             
+            // @Override
             public boolean canConnect(
                     InetSocketAddress address, ServerSession session) {
                 return true;
@@ -417,6 +444,7 @@ public class SftpProtocol implements ProtocolHandler {
         endpoint.setFileSystemFactory(new FileSystemFactory() {
             public FileSystemView createFileSystemView(final String userName) {
                 return new FileSystemView() {
+                    // @Override
                     public SshFile getFile(String file) {
                         return new SftpServletFile(file, userName);
                     }
