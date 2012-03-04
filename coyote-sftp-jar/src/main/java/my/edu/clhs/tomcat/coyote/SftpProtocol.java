@@ -17,6 +17,9 @@
  */
 package my.edu.clhs.tomcat.coyote;
 
+import static javax.servlet.http.HttpServletResponse.SC_NOT_FOUND;
+import static javax.servlet.http.HttpServletResponse.SC_OK;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -33,7 +36,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
-import static org.apache.catalina.connector.Response.*;
 import org.apache.coyote.Adapter;
 import org.apache.coyote.InputBuffer;
 import org.apache.coyote.OutputBuffer;
@@ -44,6 +46,7 @@ import org.apache.coyote.Response;
 import org.apache.coyote.http11.Constants;
 import org.apache.sshd.SshServer;
 import org.apache.sshd.common.NamedFactory;
+import org.apache.sshd.common.Session;
 import org.apache.sshd.common.util.SecurityUtils;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.FileSystemFactory;
@@ -237,6 +240,11 @@ public class SftpProtocol implements ProtocolHandler {
             return false;
         }
         
+        public boolean isExecutable() {
+            // TODO does this have to be true for directories?
+            return false;
+        }
+        
         // @Override
         public boolean isRemovable() {
             return false;
@@ -312,6 +320,10 @@ public class SftpProtocol implements ProtocolHandler {
         public boolean delete() {
             // TODO implement for HTTP DELETE.
             return false;
+        }
+        
+        public boolean create() throws IOException {
+            return true;
         }
         
         // @Override
@@ -442,13 +454,29 @@ public class SftpProtocol implements ProtocolHandler {
             }
         });
         endpoint.setFileSystemFactory(new FileSystemFactory() {
-            public FileSystemView createFileSystemView(final String userName) {
-                return new FileSystemView() {
-                    // @Override
-                    public SshFile getFile(String file) {
-                        return new SftpServletFile(file, userName);
-                    }
-                };
+            class SftpServletFileSystemView implements FileSystemView {
+                // TODO is userName really still needed?
+                private final String userName;
+                
+                SftpServletFileSystemView(String userName) {
+                    this.userName = userName;
+                }
+                
+                // @Override
+                public SshFile getFile(String file) {
+                    return new SftpServletFile(file, userName);
+                }
+                
+                // @Override
+                public SshFile getFile(SshFile baseDir, String file) {
+                    return new SftpServletFile(
+                        baseDir.getAbsolutePath() + "/" + file, userName);
+                }
+            }
+            
+            public FileSystemView createFileSystemView(Session session)
+                    throws IOException {
+                return new SftpServletFileSystemView(session.getUsername());
             }
         });
         endpoint.setSubsystemFactories(
