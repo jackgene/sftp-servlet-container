@@ -1,0 +1,15 @@
+Syntax: regexp
+# Gradle
+^.*/\.gradle$
+^.*/build$
+
+# Eclipse
+^.*/\.classpath$
+^.*/\.settings$
+^.*/bin$
+
+# Misc
+^coyote-sftp-jar/testServer/key\.ser$
+
+# MacOS
+\.DS_Store$
