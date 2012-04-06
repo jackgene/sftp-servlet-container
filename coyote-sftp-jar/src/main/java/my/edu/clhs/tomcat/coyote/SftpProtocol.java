@@ -20,6 +20,7 @@ package my.edu.clhs.tomcat.coyote;
 import static javax.servlet.http.HttpServletResponse.SC_NOT_FOUND;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -31,10 +32,15 @@ import java.security.PublicKey;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.coyote.Adapter;
 import org.apache.coyote.InputBuffer;
@@ -61,6 +67,8 @@ import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.sftp.SftpSubsystem;
 import org.apache.tomcat.util.buf.ByteChunk;
 import org.apache.tomcat.util.http.MimeHeaders;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link ProtocolHandler} for the SSH File Transfer Protocol.
@@ -68,6 +76,8 @@ import org.apache.tomcat.util.http.MimeHeaders;
  * @author Jack Leow
  */
 public class SftpProtocol implements ProtocolHandler {
+    private static final Logger log =
+        LoggerFactory.getLogger(SftpProtocol.class);
     private SshServer endpoint = SshServer.setUpDefaultServer();
     
     private HashMap<String,Object> attributes = new HashMap<String,Object>();
@@ -114,11 +124,16 @@ public class SftpProtocol implements ProtocolHandler {
         }
     }
     
+    // TODO consider extracting this out into its own class
     private class SftpServletFile implements SshFile {
         private final String userName;
         private final int httpStatus;
         private final MimeHeaders httpHeaders;
-        private final long contentLength;
+        // TODO make these final
+        private long contentLength;
+        private Boolean isDirectory;
+        private Boolean isFile;
+        private List<Map<String,String>> sshFilesProps;
         
         /**
          * Submit a request to be serviced by Coyote.
@@ -164,6 +179,75 @@ public class SftpProtocol implements ProtocolHandler {
             return response;
         }
         
+        // TODO revisit/rewrite
+        private Response processWebDav() {
+            InputBuffer propFindBuf = new InputBuffer() {
+                public int doRead(ByteChunk chunk, Request request)
+                        throws IOException {
+                    // TODO move out
+                    String propFindBody =
+                        "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" +
+                        "<D:propfind xmlns:D=\"DAV:\">" +
+                            "<D:allprop/>" +
+                        "</D:propfind>";
+                    int len = propFindBody.length();
+                    
+                    chunk.setBytes(
+                        propFindBody.getBytes(chunk.getCharset()), 0, len);
+                    return len;
+                }
+            };
+            final ByteChunk webDavChunk = new ByteChunk();
+            OutputBuffer webDavBuf = new OutputBuffer() {
+                public int doWrite(ByteChunk chunk, Response response)
+                        throws IOException {
+                    webDavChunk.append(chunk);
+                    return chunk.getLength();
+                }
+            };
+            Response response = service("PROPFIND", propFindBuf, webDavBuf);
+            // TODO hack since it's hard to get Spring to return 207
+            int status = response.getStatus();
+            if (status >= SC_OK && status <= 207) { // TODO consider throwing exception otherwise
+//                System.out.println("=====");
+//                System.out.println(new String(webDavChunk.getBuffer()));
+//                System.out.println("=====");
+                
+                SAXParserFactory factory = SAXParserFactory.newInstance();
+                factory.setNamespaceAware(true);
+                factory.setValidating(true);
+                WebDavSaxHandler handler = new WebDavSaxHandler();
+                try {
+                    SAXParser parser = factory.newSAXParser();
+                    parser.parse(
+                        new ByteArrayInputStream(
+                        webDavChunk.getBuffer()), handler);
+                    List<Map<String,String>> parsedFilesProps =
+                        handler.getFiles();
+                    for (Iterator<Map<String,String>> iter =
+                            parsedFilesProps.iterator(); iter.hasNext();) {
+                        Map<String,String> fileProps = iter.next();
+                        
+                        if (absolutePath.equals(fileProps.get("path"))) {
+                            iter.remove();
+                            String len = fileProps.get("contentLength");
+                            if (len != null) {
+                                contentLength = Long.parseLong(len);
+                            }
+                            isDirectory = fileProps.containsKey("isDirectory");
+                            isFile = fileProps.containsKey("isFile");
+                        }
+                    }
+                    sshFilesProps =
+                        Collections.unmodifiableList(parsedFilesProps);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            
+            return response;
+        }
+        
         public SftpServletFile(String path, String userName) {
             this.userName = userName;
             if (path == null || path.equals(".")) {
@@ -173,24 +257,39 @@ public class SftpProtocol implements ProtocolHandler {
             } else {
                 absolutePath = "/" + path;
             }
+            // TODO there's a better implementation of this yet to be pushed.
+            if (absolutePath.endsWith(".")) absolutePath += "/";
             
-            if (!absolutePath.endsWith("/")) {
-                OutputBuffer outputBuffer = new OutputBuffer() {
-                    public int doWrite(ByteChunk chunk, Response response)
-                            throws IOException {
-                        return chunk.getLength();
-                    }
-                };
+            Response response = null;
+            try {
+                response = processWebDav();
+            } catch (Exception e) { // throw specific exception
                 
-                Response response = service(Constants.HEAD, null, outputBuffer);
-                
-                httpStatus = response.getStatus();
-                contentLength = response.getContentLengthLong();
+            }
+            int status = response != null ? response.getStatus() : -1;
+            if (status >= SC_OK && status <= 207) {
+                // TODO is this right? is it OK to return 207?
+                httpStatus = status;
                 httpHeaders = response.getMimeHeaders();
             } else {
-                httpStatus = SC_NOT_FOUND;
-                contentLength = 0;
-                httpHeaders = new MimeHeaders();
+                if (!absolutePath.endsWith("/")) {
+                    OutputBuffer outputBuffer = new OutputBuffer() {
+                        public int doWrite(ByteChunk chunk, Response response)
+                                throws IOException {
+                            return chunk.getLength();
+                        }
+                    };
+                    
+                    response = service(Constants.HEAD, null, outputBuffer);
+                    
+                    httpStatus = response.getStatus();
+                    contentLength = response.getContentLengthLong();
+                    httpHeaders = response.getMimeHeaders();
+                } else {
+                    httpStatus = SC_NOT_FOUND;
+                    contentLength = 0;
+                    httpHeaders = new MimeHeaders();
+                }
             }
         }
         
@@ -230,9 +329,22 @@ public class SftpProtocol implements ProtocolHandler {
         
         // @Override
         public List<SshFile> listSshFiles() {
-            // TODO use absolute paths when creating files.
-            return Collections.singletonList(
-                (SshFile)new SftpServletFile(README_FILENAME, userName));
+            List<SshFile> sshFiles;
+            
+            if (sshFilesProps != null) {
+                sshFiles = new ArrayList<SshFile>();
+                for (Map<String,String> fileProps : sshFilesProps) {
+                    sshFiles.add(
+                        new SftpServletFile(fileProps.get("path"), userName));
+                }
+                sshFiles = Collections.unmodifiableList(sshFiles);
+            } else {
+                // TODO use absolute paths when creating files.
+                sshFiles = Collections.singletonList(
+                    (SshFile)new SftpServletFile(README_FILENAME, userName));
+            }
+            
+            return sshFiles;
         }
         
         // @Override
@@ -257,12 +369,14 @@ public class SftpProtocol implements ProtocolHandler {
         
         // @Override
         public boolean isFile() {
-            return httpStatus == SC_OK || README_FILENAME.equals(getName());
+            return isFile != null ?
+                isFile :
+                httpStatus == SC_OK || README_FILENAME.equals(getName());
         }
         
         // @Override
         public boolean isDirectory() {
-            return !isFile();
+            return isDirectory != null ? isDirectory : !isFile();
         }
         
         // @Override
@@ -406,8 +520,14 @@ public class SftpProtocol implements ProtocolHandler {
             
             return is;
         }
+        
+        @Override
+        public String toString() {
+            return absolutePath;
+        }
     }
     
+    // @Override - ProtocolHandler
     public void init() throws Exception {
         if (SecurityUtils.isBouncyCastleRegistered()) {
             endpoint.setKeyPairProvider(
@@ -486,6 +606,7 @@ public class SftpProtocol implements ProtocolHandler {
     
     // @Override - ProtocolHandler
     public void start() throws Exception {
+        log.info("listening on port " + getPort());
         endpoint.start();
     }
     

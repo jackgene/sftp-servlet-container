@@ -20,12 +20,12 @@
    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
    xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
    version="2.5">
-
+  
   <display-name>Welcome to Tomcat</display-name>
   <description>
      Welcome to Tomcat
   </description>
-
+  
   <!-- Enable WebDAV for SFTP testing -->
   <servlet>
     <servlet-name>webdav</servlet-name>
