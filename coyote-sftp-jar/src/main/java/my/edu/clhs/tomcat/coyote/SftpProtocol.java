@@ -319,12 +319,12 @@ public class SftpProtocol implements ProtocolHandler {
         
         // @Override
         public boolean move(SshFile destination) {
-            return false;
+            throw new UnsupportedOperationException();
         }
         
         // @Override
         public boolean mkdir() {
-            return false;
+            throw new UnsupportedOperationException();
         }
         
         // @Override
@@ -433,7 +433,7 @@ public class SftpProtocol implements ProtocolHandler {
         // @Override
         public boolean delete() {
             // TODO implement for HTTP DELETE.
-            return false;
+            throw new UnsupportedOperationException("Pending");
         }
         
         public boolean create() throws IOException {

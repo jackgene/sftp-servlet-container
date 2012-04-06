@@ -26,6 +26,7 @@
      Welcome to Tomcat
   </description>
   
+  <!-- Enable WebDAV for SFTP testing -->
   <servlet>
     <servlet-name>webdav</servlet-name>
     <servlet-class>org.apache.catalina.servlets.WebdavServlet</servlet-class>
