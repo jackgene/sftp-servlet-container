@@ -1,4 +1,4 @@
-/**
+/*
  * WebDavSaxHandler.java
  *
  * Copyright 2012 Jack Leow

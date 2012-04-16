@@ -1,7 +1,7 @@
-/**
+/*
  * SftpProtocol.java
  *
- * Copyright 2011 Jack Leow
+ * Copyright 2011-2012 Jack Leow
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -209,10 +209,6 @@ public class SftpProtocol implements ProtocolHandler {
             // TODO hack since it's hard to get Spring to return 207
             int status = response.getStatus();
             if (status >= SC_OK && status <= 207) { // TODO consider throwing exception otherwise
-//                System.out.println("=====");
-//                System.out.println(new String(webDavChunk.getBuffer()));
-//                System.out.println("=====");
-                
                 SAXParserFactory factory = SAXParserFactory.newInstance();
                 factory.setNamespaceAware(true);
                 factory.setValidating(true);
