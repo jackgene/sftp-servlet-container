@@ -50,6 +50,8 @@ import org.apache.coyote.Request;
 import org.apache.coyote.RequestInfo;
 import org.apache.coyote.Response;
 import org.apache.coyote.http11.Constants;
+import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
 import org.apache.sshd.SshServer;
 import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.common.Session;
@@ -67,8 +69,6 @@ import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.sftp.SftpSubsystem;
 import org.apache.tomcat.util.buf.ByteChunk;
 import org.apache.tomcat.util.http.MimeHeaders;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * {@link ProtocolHandler} for the SSH File Transfer Protocol.
@@ -76,8 +76,7 @@ import org.slf4j.LoggerFactory;
  * @author Jack Leow
  */
 public class SftpProtocol implements ProtocolHandler {
-    private static final Logger log =
-        LoggerFactory.getLogger(SftpProtocol.class);
+    private static final Log log = LogFactory.getLog(SftpProtocol.class);
     private SshServer endpoint = SshServer.setUpDefaultServer();
     
     private HashMap<String,Object> attributes = new HashMap<String,Object>();
@@ -602,7 +601,7 @@ public class SftpProtocol implements ProtocolHandler {
     
     // @Override - ProtocolHandler
     public void start() throws Exception {
-        log.info("listening on port " + getPort());
+        log.info("sftp listening on port " + getPort());
         endpoint.start();
     }
     
