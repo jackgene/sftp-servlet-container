@@ -247,19 +247,18 @@ public class SftpProtocol implements ProtocolHandler {
             this.userName = userName;
             if (path == null || path.equals(".")) {
                 absolutePath = "/";
-            } else if (path.startsWith("/")) {
-                absolutePath = path;
             } else {
-                absolutePath = "/" + path;
+                absolutePath =
+                    (path.startsWith("/") ? "" : "/") +
+                    path +
+                    (path.endsWith(".") ? "/" : "");
             }
-            // TODO there's a better implementation of this yet to be pushed.
-            if (absolutePath.endsWith(".")) absolutePath += "/";
             
             Response response = null;
             try {
                 response = processWebDav();
             } catch (Exception e) { // throw specific exception
-                
+                // TODO WTF was going on here?
             }
             int status = response != null ? response.getStatus() : -1;
             if (status >= SC_OK && status <= 207) {
@@ -288,7 +287,7 @@ public class SftpProtocol implements ProtocolHandler {
             }
         }
         
-        private String absolutePath;
+        private final String absolutePath;
         
         // @Override
         public String getAbsolutePath() {
