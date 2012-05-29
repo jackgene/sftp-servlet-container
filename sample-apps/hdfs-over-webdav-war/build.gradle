@@ -1,0 +1,32 @@
+apply plugin: 'war'
+apply plugin: 'eclipse-wtp'
+
+sourceCompatibility = 1.6
+version = '0.0-SNAPSHOT'
+
+war {
+    archiveName = 'hdfs.war'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    providedCompile(
+        'javax.servlet:servlet-api:2.5',
+    )
+    compile(
+        'com.google.guava:guava:12.0',
+        'net.sf.webdav-servlet:webdav-servlet:2.0',
+        'org.codehaus.jackson:jackson-core-asl:1.5.2',
+    )
+    compile(
+        'org.apache.hadoop:hadoop-core:0.20.203.0'
+    ) {
+        exclude group: 'org.mortbay.jetty'
+        exclude group: 'tomcat'
+    }
+}
+
+task wrapper(type: Wrapper)
