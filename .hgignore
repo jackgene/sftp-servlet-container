@@ -4,6 +4,7 @@ Syntax: regexp
 ^.*/build$
 
 # Eclipse
+^.*/\.project$
 ^.*/\.classpath$
 ^.*/\.settings$
 ^.*/bin$
