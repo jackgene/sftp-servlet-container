@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
@@ -50,6 +51,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 
 /**
@@ -63,7 +67,7 @@ public class HdfsStore implements IWebdavStore {
         LoggerFactory.getLogger(HdfsStore.class);
     
     private final URI HDFS_URI;
-    private final FileSystem hdfs;
+    private final FileSystem guestFileSystem;
     
     public HdfsStore(File root) {
         try {
@@ -72,6 +76,7 @@ public class HdfsStore implements IWebdavStore {
             final String hdfsRootUri =
                 (String)namingCtx.lookup(HDFS_ROOT_URI_JNDI_NAME);
             HDFS_URI = new URI(hdfsRootUri);
+            guestFileSystem = FileSystem.get(HDFS_URI, EMPTY_CFG, "guest");
         } catch (NamingException e) {
             throw new RuntimeException(e);
         } catch (ClassCastException e) {
@@ -79,20 +84,40 @@ public class HdfsStore implements IWebdavStore {
                 HDFS_ROOT_URI_JNDI_NAME + " must be a java.lang.String", e);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
-        }
-        
-        // TODO consider moving this to begin(), one per principal.
-        try {
-            hdfs = FileSystem.get(HDFS_URI, new Configuration());
         } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
     
-    private static class HdfsSession implements ITransaction {
-        public HdfsSession(Principal principal, FileSystem fileSystem) {
+    private static final Configuration EMPTY_CFG = new Configuration();
+    private class HdfsTransaction implements ITransaction {
+        private final LoadingCache<String, FileSystem> fileSystems =
+            CacheBuilder.newBuilder().maximumSize(16).build(
+                CacheLoader.from(new Function<String, FileSystem>() {
+                    
+                    @Override
+                    public FileSystem apply(String name) {
+                        try {
+                            return FileSystem.get(HDFS_URI, EMPTY_CFG, name);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                })
+            );
+        
+        public HdfsTransaction(Principal principal) {
             this.principal = principal;
-            this.fileSystem =fileSystem;
+            try {
+                this.fileSystem = principal != null ?
+                    fileSystems.get(principal.getName()) : guestFileSystem;
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            }
         }
         
         private final Principal principal;
@@ -154,12 +179,10 @@ public class HdfsStore implements IWebdavStore {
     
     @Override
     public ITransaction begin(Principal principal) {
-        if (principal != null)  {
+        if (principal != null) {
             System.err.println("Hello " + principal.getName() + "-" + System.identityHashCode(principal) + "!");
         }
-        ITransaction transaction = new HdfsSession(
-            principal, hdfs
-        );
+        ITransaction transaction = new HdfsTransaction(principal);
         log.debug("begin()\t\t" + transaction.hashCode());
         return transaction;
     }
@@ -173,7 +196,7 @@ public class HdfsStore implements IWebdavStore {
     @Override
     public void commit(ITransaction transaction) {
         log.debug("commit()\t\t" + transaction.hashCode());
-        HdfsSession session = (HdfsSession)transaction;
+        HdfsTransaction session = (HdfsTransaction)transaction;
         
         session.handleCommit();
     }
@@ -181,7 +204,8 @@ public class HdfsStore implements IWebdavStore {
     @Override
     public void rollback(ITransaction transaction) {
         log.debug("rollback()\t\t" + transaction.hashCode());
-        HdfsSession session = (HdfsSession)transaction;
+        log.warn("Transaction is being rolled back.");
+        HdfsTransaction session = (HdfsTransaction)transaction;
         
         session.handleRollback();
     }
@@ -190,7 +214,7 @@ public class HdfsStore implements IWebdavStore {
     public void createFolder(ITransaction transaction, String folderUri) {
         log.debug("createFolder()\t" + folderUri + "\t" + transaction.hashCode());
         Path path = new Path(folderUri);
-        HdfsSession session = (HdfsSession)transaction;
+        HdfsTransaction session = (HdfsTransaction)transaction;
         FileSystem hdfs = session.getFileSystem();
         
         session.addCreatedObject(path);
@@ -207,7 +231,7 @@ public class HdfsStore implements IWebdavStore {
     public void createResource(ITransaction transaction, String resourceUri) {
         log.debug("createResource()\t" + resourceUri + "\t" + transaction.hashCode());
         Path path = new Path(resourceUri);
-        HdfsSession session = (HdfsSession)transaction;
+        HdfsTransaction session = (HdfsTransaction)transaction;
         FileSystem hdfs = session.getFileSystem();
         
         session.addCreatedObject(path);
@@ -225,7 +249,7 @@ public class HdfsStore implements IWebdavStore {
             ITransaction transaction, String uri) {
         log.debug("getResourceContent()\t" + uri + "\t" + transaction.hashCode());
         Path path = new Path(uri);
-        FileSystem hdfs = ((HdfsSession)transaction).getFileSystem();
+        FileSystem hdfs = ((HdfsTransaction)transaction).getFileSystem();
         
         try {
             return hdfs.open(path);
@@ -243,7 +267,7 @@ public class HdfsStore implements IWebdavStore {
         log.debug("setResourceContent()\t" + resourceUri + "\t" + transaction.hashCode());
         long numBytesWritten = 0;
         Path path = new Path(resourceUri);
-        HdfsSession session = (HdfsSession)transaction;
+        HdfsTransaction session = (HdfsTransaction)transaction;
         FileSystem hdfs = session.getFileSystem();
         
         OutputStream out = session.getOutputStream(path);
@@ -279,7 +303,7 @@ public class HdfsStore implements IWebdavStore {
             ITransaction transaction, String folderUri) {
         log.debug("getChildrenNames()\t" + folderUri + "\t" + transaction.hashCode());
         try {
-            FileSystem fs = ((HdfsSession)transaction).getFileSystem();
+            FileSystem fs = ((HdfsTransaction)transaction).getFileSystem();
             List<FileStatus> fileStatuses =
                 Arrays.asList(fs.listStatus(new Path(folderUri)));
             List<String> names = Lists.transform(fileStatuses,
@@ -300,7 +324,7 @@ public class HdfsStore implements IWebdavStore {
     public long getResourceLength(ITransaction transaction, String uri) {
         log.debug("getResourceLength()\t" + uri + "\t" + transaction.hashCode());
         Path path = new Path(uri);
-        FileSystem hdfs = ((HdfsSession)transaction).getFileSystem();
+        FileSystem hdfs = ((HdfsTransaction)transaction).getFileSystem();
         
         try {
             FileStatus fileStatus = hdfs.getFileStatus(path);
@@ -315,7 +339,7 @@ public class HdfsStore implements IWebdavStore {
     public void removeObject(ITransaction transaction, String uri) {
         log.debug("removeObject()\t" + uri + "\t" + transaction.hashCode());
         Path path = new Path(uri);
-        FileSystem hdfs = ((HdfsSession)transaction).getFileSystem();
+        FileSystem hdfs = ((HdfsTransaction)transaction).getFileSystem();
         
         try {
             hdfs.delete(path, true);
@@ -331,7 +355,7 @@ public class HdfsStore implements IWebdavStore {
         log.debug("getStoredObject()\t" + uri + "\t" + transaction.hashCode());
         StoredObject so = null;
         Path path = new Path(uri);
-        FileSystem hdfs = ((HdfsSession)transaction).getFileSystem();
+        FileSystem hdfs = ((HdfsTransaction)transaction).getFileSystem();
         
         try {
             if (hdfs.exists(path)) {
