@@ -108,6 +108,9 @@ public class SftpProtocol implements ProtocolHandler {
     public int getPort() { return endpoint.getPort(); }
     public void setPort(int port) { endpoint.setPort(port); }
     
+    public String getHost() { return endpoint.getHost(); }
+    public void setHost(String host) { endpoint.setHost(host); }
+    
     private static final DateFormat HTTP_DATE_FORMAT =
         new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
     private static final String README_FILENAME = "README.txt";
@@ -600,7 +603,11 @@ public class SftpProtocol implements ProtocolHandler {
     
     // @Override - ProtocolHandler
     public void start() throws Exception {
-        log.info("sftp listening on port " + getPort());
+        String listenHost = getHost();
+        log.info(
+            "Starting Coyote SFTP/ssh-2.0 on /" +
+            (listenHost != null ? listenHost : "0.0.0.0") + ":" +
+            getPort());
         endpoint.start();
     }
     
