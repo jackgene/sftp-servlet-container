@@ -56,8 +56,7 @@
     <welcome-file>index.jsp</welcome-file>
   </welcome-file-list>
   
-<<<<<<< local
-<!--   <security-constraint>
+  <security-constraint>
     <web-resource-collection>
       <web-resource-name>Everything</web-resource-name>
       <url-pattern>/*</url-pattern>
@@ -69,17 +68,11 @@
       <role-name>*</role-name>
     </auth-constraint>
   </security-constraint>
- -->  <login-config>
-=======
   <login-config>
->>>>>>> other
     <auth-method>BASIC</auth-method>
     <realm-name>default</realm-name>
   </login-config>
-<!--   <security-role>
-    <role-name>SZ_Domain Users</role-name>
-  </security-role>
- -->  
+  
   <resource-ref>
     <res-ref-name>hdfsRootUri</res-ref-name>
     <res-type>java.lang.String</res-type>
