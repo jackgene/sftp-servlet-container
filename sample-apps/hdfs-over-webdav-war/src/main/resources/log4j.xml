@@ -16,12 +16,12 @@
     </layout>
   </appender>
   
+  <category name="my.edu.clhs">
+    <level value="INFO" />
+  </category>
+  
   <root>
     <priority value="WARN" />
     <appender-ref ref="stdout" />
   </root>
-  
-  <logger name="my.edu.clhs">
-    <level value="INFO" />
-  </logger>
 </log4j:configuration>
