@@ -18,7 +18,6 @@ dependencies {
     )
     compile(
         'com.google.guava:guava:12.0',
-        'net.sf.webdav-servlet:webdav-servlet:2.0',
         'org.codehaus.jackson:jackson-core-asl:1.5.2',
         'org.slf4j:slf4j-api:1.6+',
         'org.slf4j:slf4j-log4j12:1.6+',
@@ -29,6 +28,7 @@ dependencies {
         exclude group: 'org.mortbay.jetty'
         exclude group: 'tomcat'
     }
+    compile files('libs/webdav-servlet-2.0.1.jar')
 }
 
 task wrapper(type: Wrapper)
