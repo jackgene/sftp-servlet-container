@@ -333,7 +333,7 @@ public class HdfsStore implements IWebdavStore {
                 int read;
                 byte[] buf = new byte[64*1024];
                 int counter = 0;
-                while ((read = content.read(buf, 0, buf.length)) != -1) {
+                while ((read = content.read(buf)) != -1) {
                     out.write(buf, 0, read);
                     numBytesWritten += read;
                     if (log.isTraceEnabled()) {
