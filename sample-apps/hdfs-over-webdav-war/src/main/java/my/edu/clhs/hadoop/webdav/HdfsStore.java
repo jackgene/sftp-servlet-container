@@ -437,6 +437,14 @@ public class HdfsStore implements IWebdavStore {
                 so.setLastModified(new Date(fileStatus.getModificationTime()));
                 so.setCreationDate(new Date(fileStatus.getModificationTime()));
                 so.setResourceLength(fileStatus.getLen());
+            } else if (BANNED_FILES.contains(path.getName())) {
+                final Date now = new Date();
+                so =  new StoredObject();
+                
+                so.setFolder(false);
+                so.setLastModified(now);
+                so.setCreationDate(now);
+                so.setResourceLength(0);
             }
         } catch (IOException e) {
             throw new WebdavException(e);
