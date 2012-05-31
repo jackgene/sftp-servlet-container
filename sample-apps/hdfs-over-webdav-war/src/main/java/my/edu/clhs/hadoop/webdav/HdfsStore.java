@@ -20,16 +20,13 @@ package my.edu.clhs.hadoop.webdav;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import javax.naming.Context;
@@ -43,6 +40,7 @@ import net.sf.webdav.exceptions.AccessDeniedException;
 import net.sf.webdav.exceptions.WebdavException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -54,6 +52,9 @@ import com.google.common.base.Function;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 /**
@@ -63,6 +64,8 @@ import com.google.common.collect.Lists;
  */
 public class HdfsStore implements IWebdavStore {
     public static final String HDFS_ROOT_URI_JNDI_NAME = "hdfsRootUri";
+    private static final Set<String> BANNED_FILES = ImmutableSet.of(
+        "Thumbs.db", "desktop.ini", ".DS_Store");
     private static final Logger log =
         LoggerFactory.getLogger(HdfsStore.class);
     
@@ -94,21 +97,37 @@ public class HdfsStore implements IWebdavStore {
     private static final Configuration EMPTY_CFG = new Configuration();
     private class HdfsTransaction implements ITransaction {
         private final LoadingCache<String, FileSystem> fileSystems =
-            CacheBuilder.newBuilder().maximumSize(16).build(
-                CacheLoader.from(new Function<String, FileSystem>() {
-                    
-                    @Override
-                    public FileSystem apply(String name) {
-                        try {
-                            return FileSystem.get(HDFS_URI, EMPTY_CFG, name);
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
+            CacheBuilder.newBuilder().
+                maximumSize(16).
+                removalListener(
+                    new RemovalListener<String, FileSystem>() {
+                        @Override
+                        public void onRemoval(
+                                RemovalNotification<String, FileSystem> evt) {
+                            try {
+                                evt.getValue().close();
+                            } catch (IOException e) {
+                                log.warn("Failed to close Filssystem", e);
+                            }
                         }
                     }
-                })
-            );
+                ).
+                build(
+                    CacheLoader.from(new Function<String, FileSystem>() {
+                        
+                        @Override
+                        public FileSystem apply(String name) {
+                            try {
+                                return FileSystem.get(
+                                    HDFS_URI, EMPTY_CFG, name);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    })
+                );
         
         public HdfsTransaction(Principal principal) {
             this.principal = principal;
@@ -126,98 +145,79 @@ public class HdfsStore implements IWebdavStore {
             return principal;
         }
         
-        private final FileSystem fileSystem;
+        private FileSystem fileSystem;
         
         public FileSystem getFileSystem() {
             return fileSystem;
         }
         
-        private List<Path> createdObjects = new LinkedList<Path>();
-        
-        public void addCreatedObject(Path uri) {
-            createdObjects.add(0, uri);
-        }
-        
-        private Map<Path,OutputStream> outputStreams =
-            new HashMap<Path,OutputStream>();
-        
-        public OutputStream getOutputStream(Path path) {
-            return outputStreams.get(path);
-        }
-        
-        public void putOutputStream(Path path, OutputStream outputStream) {
-            outputStreams.put(path, outputStream);
-        }
-        
         public void handleCommit() {
-            for (OutputStream out : outputStreams.values()) {
-                try {
-                    out.close();
-                } catch (IOException e) {
-                    // TODO log warning
-                }
-            }
+            // TODO log warning if input streams aren't closed by the client
         }
         
         public void handleRollback() {
-            for (OutputStream out : outputStreams.values()) {
-                try {
-                    out.close();
-                } catch (IOException e) {
-                    // TODO log warning
-                }
-            }
-            for (Path uri : createdObjects) {
-                try {
-                    fileSystem.delete(uri, true);
-                } catch(IOException e) {
-                    // TODO Log warning.
-                }
-            }
+            // TODO log all rolled back operations.
+            // TODO log warning if input streams aren't closed by the client
+            throw new UnsupportedOperationException("Rollback not supported.");
         }
+        
+        @Override
+        public String toString() {
+            return "tx-" + System.identityHashCode(this);
+        }
+        
     }
     
     @Override
     public ITransaction begin(Principal principal) {
-        if (principal != null) {
-            System.err.println("Hello " + principal.getName() + "-" + System.identityHashCode(principal) + "!");
-        }
         ITransaction transaction = new HdfsTransaction(principal);
-        log.debug("begin()\t\t" + transaction.hashCode());
+        log.debug("begin(" + principal + "): " + transaction);
+        if (principal != null) {
+            log.debug("Authenticating using principal: " + principal.getName());
+        } else {
+            log.debug("null principal, authenticating as guest.");
+        }
         return transaction;
     }
     
     @Override
     public void checkAuthentication(ITransaction transaction) {
-        log.debug("checkAuthentication()\t\t" + transaction.hashCode());
+        log.debug("checkAuthentication(" + transaction + ")");
         // Do nothing.
+    }
+    
+    public void checkWriteAccess(ITransaction transaction) {
+        log.debug("checkWriteAccess(" + transaction + ")");
+        if (transaction.getPrincipal() == null) {
+            throw new AccessDeniedException("Must be authenticated to write.");
+        }
     }
     
     @Override
     public void commit(ITransaction transaction) {
-        log.debug("commit()\t\t" + transaction.hashCode());
-        HdfsTransaction session = (HdfsTransaction)transaction;
+        log.debug("commit(" + transaction + ")");
+        HdfsTransaction hdfsTx = (HdfsTransaction)transaction;
         
-        session.handleCommit();
+        hdfsTx.handleCommit();
     }
     
     @Override
     public void rollback(ITransaction transaction) {
-        log.debug("rollback()\t\t" + transaction.hashCode());
+        log.debug("rollback(" + transaction + ")");
         log.warn("Transaction is being rolled back.");
-        HdfsTransaction session = (HdfsTransaction)transaction;
+        HdfsTransaction hdfsTx = (HdfsTransaction)transaction;
         
-        session.handleRollback();
+        hdfsTx.handleRollback();
     }
     
     @Override
     public void createFolder(ITransaction transaction, String folderUri) {
-        log.debug("createFolder()\t" + folderUri + "\t" + transaction.hashCode());
+        log.debug("createFolder(" + transaction + "," + folderUri + ")");
+        checkWriteAccess(transaction);
         Path path = new Path(folderUri);
-        HdfsTransaction session = (HdfsTransaction)transaction;
-        FileSystem hdfs = session.getFileSystem();
+        HdfsTransaction hdfsTx = (HdfsTransaction)transaction;
+        FileSystem hdfs = hdfsTx.getFileSystem();
         
-        session.addCreatedObject(path);
         try {
             hdfs.mkdirs(path);
         } catch (AccessControlException e) {
@@ -229,25 +229,27 @@ public class HdfsStore implements IWebdavStore {
     
     @Override
     public void createResource(ITransaction transaction, String resourceUri) {
-        log.debug("createResource()\t" + resourceUri + "\t" + transaction.hashCode());
+        // TODO prevent creation of .DS_Store, Thumbs.db, desktop.ini etc
+        log.debug("createResource(" + transaction + "," + resourceUri + ")");
+        checkWriteAccess(transaction);
         Path path = new Path(resourceUri);
-        HdfsTransaction session = (HdfsTransaction)transaction;
-        FileSystem hdfs = session.getFileSystem();
+        HdfsTransaction hdfsTx = (HdfsTransaction)transaction;
+        FileSystem hdfs = hdfsTx.getFileSystem();
         
-        session.addCreatedObject(path);
-        try {
-            OutputStream out = hdfs.create(path);
-            session.putOutputStream(path, out);
-        } catch (AccessControlException e) {
-            throw new AccessDeniedException(e);
-        } catch (IOException e) {
-            throw new WebdavException(e);
+        if (!BANNED_FILES.contains(path.getName())) {
+            try {
+                hdfs.createNewFile(path);
+            } catch (AccessControlException e) {
+                throw new AccessDeniedException(e);
+            } catch (IOException e) {
+                throw new WebdavException(e);
+            }
         }
     }
     
     public InputStream getResourceContent(
             ITransaction transaction, String uri) {
-        log.debug("getResourceContent()\t" + uri + "\t" + transaction.hashCode());
+        log.debug("getResourceContent(" + transaction + "," + uri + ")");
         Path path = new Path(uri);
         FileSystem hdfs = ((HdfsTransaction)transaction).getFileSystem();
         
@@ -264,34 +266,46 @@ public class HdfsStore implements IWebdavStore {
     public long setResourceContent(
             ITransaction transaction, String resourceUri,
             InputStream content, String contentType, String characterEncoding) {
-        log.debug("setResourceContent()\t" + resourceUri + "\t" + transaction.hashCode());
+        // TODO prevent creation of .DS_Store, Thumbs.db, desktop.ini etc
+        log.debug("setResourceContent(" +
+            transaction + "," + resourceUri + ",...)");
         long numBytesWritten = 0;
         Path path = new Path(resourceUri);
-        HdfsTransaction session = (HdfsTransaction)transaction;
-        FileSystem hdfs = session.getFileSystem();
+        HdfsTransaction hdfsTx = (HdfsTransaction)transaction;
+        FileSystem hdfs = hdfsTx.getFileSystem();
         
-        OutputStream out = session.getOutputStream(path);
-        try {
-            if (out == null) {
-                out = hdfs.create(path, true);
-            }
-            
-            int read;
-            byte[] buf = new byte[64*1024];
-
-            while ((read = content.read(buf, 0, buf.length)) != -1) {
-                out.write(buf, 0, read);
-                numBytesWritten += read;
-            }
-        } catch (AccessControlException e) {
-            throw new AccessDeniedException(e);
-        } catch (Exception e) {
-            throw new WebdavException(e);
-        } finally {
+        FSDataOutputStream out = null;
+        if (!BANNED_FILES.contains(path.getName())) {
             try {
-                if (out != null) out.close();
+                out = hdfs.create(path, true);
+                
+                int read;
+                byte[] buf = new byte[64*1024];
+                while ((read = content.read(buf, 0, buf.length)) != -1) {
+                    out.write(buf, 0, read);
+                    numBytesWritten += read;
+                }
+            } catch (AccessControlException e) {
+                throw new AccessDeniedException(e);
             } catch (IOException e) {
-                // oh well
+                throw new WebdavException(e);
+            } finally {
+                try {
+                    if (out != null) out.close();
+                } catch (IOException e) {
+                    log.warn("Failed to close output stream", e);
+                }
+            }
+        } else {
+            try {
+                int read;
+                byte[] buf = new byte[64*1024];
+                
+                while ((read = content.read(buf, 0, buf.length)) != -1) {
+                    numBytesWritten += read;
+                }
+            } catch (IOException e) {
+                throw new WebdavException(e);
             }
         }
         
@@ -301,7 +315,7 @@ public class HdfsStore implements IWebdavStore {
     @Override
     public String[] getChildrenNames(
             ITransaction transaction, String folderUri) {
-        log.debug("getChildrenNames()\t" + folderUri + "\t" + transaction.hashCode());
+        log.debug("getChildrenNames(" + transaction + "," + folderUri + ")");
         try {
             FileSystem fs = ((HdfsTransaction)transaction).getFileSystem();
             List<FileStatus> fileStatuses =
@@ -322,7 +336,7 @@ public class HdfsStore implements IWebdavStore {
     
     @Override
     public long getResourceLength(ITransaction transaction, String uri) {
-        log.debug("getResourceLength()\t" + uri + "\t" + transaction.hashCode());
+        log.debug("getResourceLength(" + transaction + "," + uri + ")");
         Path path = new Path(uri);
         FileSystem hdfs = ((HdfsTransaction)transaction).getFileSystem();
         
@@ -337,7 +351,8 @@ public class HdfsStore implements IWebdavStore {
     
     @Override
     public void removeObject(ITransaction transaction, String uri) {
-        log.debug("removeObject()\t" + uri + "\t" + transaction.hashCode());
+        log.debug("removeObject(" + transaction + "," + uri + ")");
+        checkWriteAccess(transaction);
         Path path = new Path(uri);
         FileSystem hdfs = ((HdfsTransaction)transaction).getFileSystem();
         
@@ -352,7 +367,7 @@ public class HdfsStore implements IWebdavStore {
     
     @Override
     public StoredObject getStoredObject(ITransaction transaction, String uri) {
-        log.debug("getStoredObject()\t" + uri + "\t" + transaction.hashCode());
+        log.debug("getStoredObject(" + transaction + "," + uri + ")");
         StoredObject so = null;
         Path path = new Path(uri);
         FileSystem hdfs = ((HdfsTransaction)transaction).getFileSystem();
