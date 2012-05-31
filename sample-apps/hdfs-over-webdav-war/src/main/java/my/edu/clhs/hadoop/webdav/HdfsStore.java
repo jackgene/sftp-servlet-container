@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -49,6 +50,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -151,12 +153,22 @@ public class HdfsStore implements IWebdavStore {
             return fileSystem;
         }
         
+        private final List<String> operationHistory = new LinkedList<String>();
+        
+        public void pushOperation(String operation) {
+            operationHistory.add(operation);
+        }
+        
         public void handleCommit() {
             // TODO log warning if input streams aren't closed by the client
         }
         
         public void handleRollback() {
-            // TODO log all rolled back operations.
+            if (log.isInfoEnabled()) {
+                log.info(
+                    "The following operations were in this transaction:\n" +
+                    Joiner.on('\n').join(operationHistory));
+            }
             // TODO log warning if input streams aren't closed by the client
             throw new UnsupportedOperationException("Rollback not supported.");
         }
@@ -229,11 +241,11 @@ public class HdfsStore implements IWebdavStore {
         } catch (IOException e) {
             throw new WebdavException(e);
         }
+        hdfsTx.pushOperation("createFolder(" + folderUri + ")");
     }
     
     @Override
     public void createResource(ITransaction transaction, String resourceUri) {
-        // TODO prevent creation of .DS_Store, Thumbs.db, desktop.ini etc
         log.debug("createResource(" + transaction + "," + resourceUri + ")");
         checkWriteAccess(transaction);
         Path path = resolvePath(resourceUri);
@@ -249,16 +261,20 @@ public class HdfsStore implements IWebdavStore {
                 throw new WebdavException(e);
             }
         }
+        hdfsTx.pushOperation("createResource(" + resourceUri + ")");
     }
     
     public InputStream getResourceContent(
             ITransaction transaction, String uri) {
         log.debug("getResourceContent(" + transaction + "," + uri + ")");
         Path path = resolvePath(uri);
-        FileSystem hdfs = ((HdfsTransaction)transaction).getFileSystem();
+        HdfsTransaction hdfsTx = (HdfsTransaction)transaction;
+        FileSystem hdfs = hdfsTx.getFileSystem();
         
         try {
-            return hdfs.open(path);
+            InputStream content = hdfs.open(path);
+            
+            return content;
         } catch (AccessControlException e) {
             throw new AccessDeniedException(e);
         } catch (IOException e) {
@@ -270,7 +286,6 @@ public class HdfsStore implements IWebdavStore {
     public long setResourceContent(
             ITransaction transaction, String resourceUri,
             InputStream content, String contentType, String characterEncoding) {
-        // TODO prevent creation of .DS_Store, Thumbs.db, desktop.ini etc
         log.debug("setResourceContent(" +
             transaction + "," + resourceUri + ",...)");
         long numBytesWritten = 0;
@@ -301,6 +316,8 @@ public class HdfsStore implements IWebdavStore {
                 }
             }
         } else {
+            // Does not actually write to HDFS
+            // Just read the stream and get the count.
             try {
                 int read;
                 byte[] buf = new byte[64*1024];
@@ -312,6 +329,7 @@ public class HdfsStore implements IWebdavStore {
                 throw new WebdavException(e);
             }
         }
+        hdfsTx.pushOperation("setResourceContent(" + resourceUri + ")");
         
         return numBytesWritten;
     }
@@ -358,7 +376,8 @@ public class HdfsStore implements IWebdavStore {
         log.debug("removeObject(" + transaction + "," + uri + ")");
         checkWriteAccess(transaction);
         Path path = resolvePath(uri);
-        FileSystem hdfs = ((HdfsTransaction)transaction).getFileSystem();
+        HdfsTransaction hdfsTx = (HdfsTransaction)transaction;
+        FileSystem hdfs = hdfsTx.getFileSystem();
         
         try {
             hdfs.delete(path, true);
@@ -367,6 +386,7 @@ public class HdfsStore implements IWebdavStore {
         } catch (IOException e) {
             throw new WebdavException(e);
         }
+        hdfsTx.pushOperation("removeObject(" + uri + ")");
     }
     
     @Override
