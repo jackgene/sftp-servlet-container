@@ -332,9 +332,19 @@ public class HdfsStore implements IWebdavStore {
                 
                 int read;
                 byte[] buf = new byte[64*1024];
+                int counter = 0;
                 while ((read = content.read(buf, 0, buf.length)) != -1) {
                     out.write(buf, 0, read);
                     numBytesWritten += read;
+                    if (log.isTraceEnabled()) {
+                        if (++counter % 1024 == 0) {
+                            log.trace("Writing file " + resourceUri + ":\n" +
+                                "chunk # " + counter + "\n" +
+                                "size of current chunk: " + read + "\n" +
+                                "kilobytes written so far: " +
+                                (numBytesWritten / 1024));
+                        }
+                    }
                 }
             } catch (AccessControlException e) {
                 throw new AccessDeniedException(e);
