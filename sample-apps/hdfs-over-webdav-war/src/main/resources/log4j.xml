@@ -17,7 +17,7 @@
   </appender>
   
   <category name="my.edu.clhs">
-    <level value="INFO" />
+    <level value="TRACE" />
   </category>
   
   <root>
