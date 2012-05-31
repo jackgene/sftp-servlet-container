@@ -25,8 +25,10 @@ import java.net.URISyntaxException;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
@@ -159,8 +161,37 @@ public class HdfsStore implements IWebdavStore {
             operationHistory.add(operation);
         }
         
+        private final Map<InputStream, Throwable> inputStreams =
+            new HashMap<InputStream, Throwable>();
+        
+        public void pushInputStream(InputStream is, Throwable stack) {
+            inputStreams.put(is, stack);
+        }
+        
+        private void closeUnclosedInputStreams() {
+            for (Map.Entry<InputStream, Throwable> contentStackPair :
+                    inputStreams.entrySet()) {
+                Throwable stack = contentStackPair.getValue();
+                
+                try {
+                    InputStream content = contentStackPair.getKey();
+                    content.available();
+                    // IOException not thrown, stream is still open.
+                    log.warn("A client did not close an input stream.", stack);
+                    content.close();
+                } catch (IOException e) {
+                    if (e.getMessage().contains("Stream closed")) {
+                         // Expected
+                        log.debug("A client did close an input stream.", stack);
+                    } else {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        }
+        
         public void handleCommit() {
-            // TODO log warning if input streams aren't closed by the client
+            closeUnclosedInputStreams();
         }
         
         public void handleRollback() {
@@ -169,7 +200,7 @@ public class HdfsStore implements IWebdavStore {
                     "The following operations were in this transaction:\n" +
                     Joiner.on('\n').join(operationHistory));
             }
-            // TODO log warning if input streams aren't closed by the client
+            closeUnclosedInputStreams();
             throw new UnsupportedOperationException("Rollback not supported.");
         }
         
@@ -273,6 +304,7 @@ public class HdfsStore implements IWebdavStore {
         
         try {
             InputStream content = hdfs.open(path);
+            hdfsTx.pushInputStream(content, new Throwable("uri=" + uri));
             
             return content;
         } catch (AccessControlException e) {
