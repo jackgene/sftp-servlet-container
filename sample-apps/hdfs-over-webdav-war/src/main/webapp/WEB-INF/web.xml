@@ -77,5 +77,6 @@
     <res-ref-name>hdfsRootUri</res-ref-name>
     <res-type>java.lang.String</res-type>
     <res-auth>Container</res-auth>
+    <res-sharing-scope>Shareable</res-sharing-scope>
   </resource-ref>
 </web-app>
