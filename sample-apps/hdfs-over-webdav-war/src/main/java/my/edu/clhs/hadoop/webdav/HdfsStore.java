@@ -181,8 +181,10 @@ public class HdfsStore implements IWebdavStore {
                     content.close();
                 } catch (IOException e) {
                     if (e.getMessage().contains("Stream closed")) {
-                         // Expected
-                        log.debug("A client did close an input stream.", stack);
+                         // We want this.
+                        log.trace(
+                            "The input stream was closed by the client as " +
+                            "desired.");
                     } else {
                         throw new RuntimeException(e);
                     }
@@ -354,7 +356,12 @@ public class HdfsStore implements IWebdavStore {
                 try {
                     if (out != null) out.close();
                 } catch (IOException e) {
-                    log.warn("Failed to close output stream", e);
+                    log.warn("Failed to close output stream.", e);
+                }
+                try {
+                    content.close();
+                } catch (IOException e) {
+                    log.warn("Failed to close input stream.", e);
                 }
             }
         } else {
