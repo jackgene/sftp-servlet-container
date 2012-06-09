@@ -43,14 +43,14 @@ import net.sf.webdav.exceptions.AccessDeniedException;
 public class FilteredWebdavStore implements IWebdavStore {
     private final Long MAX_BANNED_FILE_SIZE;
     private final IWebdavStore delegate;
-    private final Predicate<String> filterPredicate;
+    private final Predicate<String> inclusionPredicate;
     
     public FilteredWebdavStore(
-            IWebdavStore delegate, Predicate<String> filterPredicate,
+            IWebdavStore delegate, Predicate<String> inclusionPredicate,
             Long maxBannedFileSize) {
         // TODO check for null
         this.delegate = delegate;
-        this.filterPredicate = filterPredicate;
+        this.inclusionPredicate = inclusionPredicate;
         MAX_BANNED_FILE_SIZE = maxBannedFileSize;
     }
     
