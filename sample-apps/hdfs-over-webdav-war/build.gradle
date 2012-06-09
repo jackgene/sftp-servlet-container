@@ -1,5 +1,6 @@
 apply plugin: 'war'
 apply plugin: 'eclipse-wtp'
+apply plugin: 'scala'
 
 sourceCompatibility = 1.6
 version = '0.0-SNAPSHOT'
@@ -13,10 +14,21 @@ repositories {
 }
 
 dependencies {
+    // Libraries needed to run the scala tools
+    scalaTools(
+        'org.scala-lang:jline:2.9.1',
+        'org.scala-lang:scala-compiler:2.9.1',
+        'org.scala-lang:scala-library:2.9.1',
+    )
+    
     providedCompile(
         'javax.servlet:servlet-api:2.5',
     )
+    
     compile(
+        // Libraries needed for scala api
+        'org.scala-lang:scala-library:2.9.1',
+        
         'com.google.guava:guava:12.0',
         'org.codehaus.jackson:jackson-core-asl:1.5.2',
         'org.slf4j:slf4j-api:1.6+',
@@ -29,6 +41,39 @@ dependencies {
         exclude group: 'tomcat'
     }
     compile files('libs/webdav-servlet-2.0.1.jar')
+    
+    testCompile(
+        'junit:junit:4.+',
+        'org.scalatest:scalatest_2.9.2:1.8',
+    )
+}
+
+import org.gradle.plugins.ide.eclipse.model.Container
+eclipse {
+    classpath {
+        file {
+            beforeMerged { classpath ->
+                classpath.entries.removeAll { entry ->
+                    entry.kind == 'src' || entry.kind == 'con'
+                }
+            }
+            
+            whenMerged { classpath ->
+                entries = classpath.entries
+                
+                // Add Scala library
+                container = new Container(
+                    'org.scala-ide.sdt.launching.SCALA_CONTAINER')
+                i = entries.findLastIndexOf { it.kind == 'con' } + 1
+                entries.add(i, container)
+                
+                // Remove Scala Library JAR (the ScalaIDE doesn't like this)
+                entries.removeAll { entry ->
+                    entry.kind == 'lib' && entry.path.contains('scala-library')
+                }
+            }
+        }
+    }
 }
 
 task wrapper(type: Wrapper)
