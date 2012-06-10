@@ -13,12 +13,19 @@ repositories {
     mavenCentral()
 }
 
+configurations {
+    eclipseExclusion
+}
+
 dependencies {
+    ext.SCALA_VERSION = '2.9.2'
+    ext.SLF4J_VERSION = '1.6.+'
+    
     // Libraries needed to run the scala tools
     scalaTools(
-        'org.scala-lang:jline:2.9.1',
-        'org.scala-lang:scala-compiler:2.9.1',
-        'org.scala-lang:scala-library:2.9.1',
+        'org.scala-lang:jline:' + SCALA_VERSION,
+        'org.scala-lang:scala-compiler:' + SCALA_VERSION,
+        'org.scala-lang:scala-library:' + SCALA_VERSION,
     )
     
     providedCompile(
@@ -27,12 +34,12 @@ dependencies {
     
     compile(
         // Libraries needed for scala api
-        'org.scala-lang:scala-library:2.9.1',
+        'org.scala-lang:scala-library:' + SCALA_VERSION,
         
         'com.google.guava:guava:12.0',
         'org.codehaus.jackson:jackson-core-asl:1.5.2',
-        'org.slf4j:slf4j-api:1.6+',
-        'org.slf4j:slf4j-log4j12:1.6+',
+        'org.slf4j:slf4j-api:' + SLF4J_VERSION,
+        'org.slf4j:slf4j-log4j12:' + SLF4J_VERSION,
     )
     compile(
         'org.apache.hadoop:hadoop-core:0.20.203.0'
@@ -44,32 +51,93 @@ dependencies {
     
     testCompile(
         'junit:junit:4.+',
-        'org.scalatest:scalatest_2.9.2:1.8',
+        'org.scalatest:scalatest_' + SCALA_VERSION + ':1.8',
+    )
+    
+    eclipseExclusion(
+        'org.scala-lang:scala-library:' + SCALA_VERSION,
     )
 }
 
+import static org.gradle.plugins.ide.eclipse.model.AbstractClasspathEntry.*
 import org.gradle.plugins.ide.eclipse.model.Container
 eclipse {
     classpath {
+        minusConfigurations += configurations.eclipseExclusion
         file {
-            beforeMerged { classpath ->
-                classpath.entries.removeAll { entry ->
-                    entry.kind == 'src' || entry.kind == 'con'
-                }
-            }
-            
-            whenMerged { classpath ->
-                entries = classpath.entries
+            whenMerged {
+                def entries = it.entries
                 
                 // Add Scala library
-                container = new Container(
-                    'org.scala-ide.sdt.launching.SCALA_CONTAINER')
-                i = entries.findLastIndexOf { it.kind == 'con' } + 1
-                entries.add(i, container)
+                def containerNode = new Node(null, null,
+                    ['path': 'org.scala-ide.sdt.launching.SCALA_CONTAINER'])
+                def attrNode = new Node(containerNode, 'attributes')
+                def depAttrNode = new Node(attrNode, 'attribute',
+                    ['name': COMPONENT_NON_DEPENDENCY_ATTRIBUTE, 'value': ''])
+                def container = new Container(containerNode)
+                entries.add(container)
                 
-                // Remove Scala Library JAR (the ScalaIDE doesn't like this)
-                entries.removeAll { entry ->
-                    entry.kind == 'lib' && entry.path.contains('scala-library')
+                entries.sort { left,right ->
+                    def KIND_SORT_ORDER =
+                        ['src': 1, 'con': 2, 'lib': 3, 'output': 4]
+                    if (left.kind != right.kind) {
+                        return (KIND_SORT_ORDER[left.kind]).
+                            compareTo(KIND_SORT_ORDER[right.kind])
+                    } else {
+                        def kind = left.kind
+                        if (kind == 'src') {
+                            def leftParentDir = left.dir.parent
+                            def rightParentDir = right.dir.parent
+                            if (leftParentDir != rightParentDir) {
+                                return (leftParentDir).compareTo(rightParentDir)
+                            } else {
+                                def leftName = left.name
+                                def rightName = right.name
+                                // resources come last, else normal sort order
+                                return leftName == 'resources' ?
+                                    (rightName == 'resources' ? 0 : -1) :
+                                    (rightName == 'resources' ? 1 :
+                                        (leftName).compareTo(rightName))
+                            }
+                        } else if (kind == 'lib') {
+                            return (left.library.file.name).
+                                compareTo(right.library.file.name)
+                        } else {
+                            return (left.path).compareTo(right.path)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    wtp {
+        component {
+            contextPath = '/hdfs'
+            minusConfigurations += configurations.eclipseExclusion
+            file {
+                whenMerged {
+                    def entries = it.wbModuleEntries
+                    
+                    entries.sort{ left,right ->
+                        if (left.hasProperty('sourcePath')) {
+                            if (hasProperty('sourcePath')) {
+                                return (left.sourcePath).
+                                    compareTo(right.sourcePath)
+                            } else {
+                                return 1;
+                            }
+                        } else {
+                            if (right.hasProperty('sourcePath')) {
+                                return -1;
+                            } else {
+                                def leftName = left.handle.split('/')[-1]
+                                def rightName = right.handle.split('/')[-1]
+                                
+                                return leftName.compareTo(rightName)
+                            }
+                        }
+                    }
                 }
             }
         }
