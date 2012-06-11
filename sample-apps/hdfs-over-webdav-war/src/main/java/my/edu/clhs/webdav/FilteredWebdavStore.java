@@ -17,10 +17,13 @@
  */
 package my.edu.clhs.webdav;
 
+import java.io.File;
 import java.io.InputStream;
+import java.net.URI;
 import java.security.Principal;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 
 import net.sf.webdav.ITransaction;
 import net.sf.webdav.IWebdavStore;
@@ -47,12 +50,8 @@ public class FilteredWebdavStore implements IWebdavStore {
      * exclude anything.
      */
     public static final Predicate<String> LINUX_METADATA_FILE_EXCLUSIONS =
-        new Predicate<String>() {
-            @Override
-            public boolean apply(String uri) {
-                throw new UnsupportedOperationException("pending");
-            }
-        };
+        Predicates.alwaysTrue();
+    
     /**
      * Filter predicate that excludes MacOS metadata files such as
      * .DS_Store and the ._.* files.
@@ -61,9 +60,12 @@ public class FilteredWebdavStore implements IWebdavStore {
         new Predicate<String>() {
             @Override
             public boolean apply(String uri) {
-                throw new UnsupportedOperationException("pending");
+                String file = new File(uri).getName();
+                
+                return !file.equals(".DS_Store") && !file.startsWith("._.");
             }
         };
+    
     /**
      * Filter predicate that excludes Windows metadata files such as
      * desktop.ini and Thumbs.db
@@ -72,7 +74,9 @@ public class FilteredWebdavStore implements IWebdavStore {
         new Predicate<String>() {
             @Override
             public boolean apply(String uri) {
-                throw new UnsupportedOperationException("pending");
+                String file = new File(uri).getName();
+                
+                return !file.equals("desktop.ini") && !file.equals("Thumbs.db");
             }
         };
     
