@@ -29,7 +29,7 @@ import org.scalatest.junit.MustMatchersForJUnit
 class LinuxMetadataFileExclusionsSpecs
     extends WordSpec with MustMatchersForJUnit {
   "A MacOSMetadataFileExclusion Predicate" must {
-    val filter = FilteredWebdavStore.MACOS_METADATA_FILE_EXCLUSIONS
+    val filter = FilteredWebdavStore.LINUX_METADATA_FILE_EXCLUSIONS
     
     // MacOS metadata files
     "accept a plain .DS_Store file uri" in {
