@@ -1,5 +1,5 @@
 /*
- * FilteredWebdavStoreSpecs.scala
+ * MacOSMetadataFileExclusionsSpecs.scala.scala
  *
  * Copyright 2012 Jack Leow
  *
