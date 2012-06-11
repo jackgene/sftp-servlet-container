@@ -25,6 +25,8 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.junit.MustMatchersForJUnit
 import org.scalatest.WordSpec
+import net.sf.webdav.ITransaction
+import java.security.Principal
 
 /**
  * @author Jack Leow
@@ -35,7 +37,6 @@ class FilteredWebdavStoreSpecs extends WordSpec
   val mockStore = mock[IWebdavStore]
   
   "A FilteredWebdavStore" must {
-    
     "complain when initialized with no delegate" in {
       evaluating {
         new FilteredWebdavStore(null, Predicates.alwaysTrue(), 0l)
@@ -53,6 +54,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         new FilteredWebdavStore(mockStore, Predicates.alwaysTrue(), null)
       } must produce[NullPointerException]
     }
+    
     "complain when initialized with a negative maxBannedFileSize value" in {
       evaluating {
         new FilteredWebdavStore(mockStore, Predicates.alwaysTrue(), -1)
@@ -61,12 +63,59 @@ class FilteredWebdavStoreSpecs extends WordSpec
   }
   
   "A FilteredWebdavStore" when {
+    "properly initialized" must {
+      val instance = new FilteredWebdavStore(mockStore)
+      
+      "delegate begin invocations" in {
+        // Test input
+        val testPrin = mock[Principal]
+        val testTx = mock[ITransaction]
+        val expectedTx = testTx
+        
+        // Expectations
+        mockStore expects 'begin withArgs testPrin returning testTx
+        
+        // Test & verify
+        instance.begin(testPrin) must be theSameInstanceAs (expectedTx)
+      }
+      
+      "delegate checkAuthentication invocations" in {
+        val testTx = mock[ITransaction]
+        
+        // Expectations
+        mockStore expects 'checkAuthentication withArgs testTx
+        
+        // Test
+        instance.checkAuthentication(testTx)
+      }
+      
+      "delegate commit invocations" in {
+        val testTx = mock[ITransaction]
+        
+        // Expectations
+        mockStore expects 'commit withArgs testTx
+        
+        // Test
+        instance.commit(testTx)
+      }
+      
+      "delegate rollback invocations" in {
+        val testTx = mock[ITransaction]
+        
+        // Expectations
+        mockStore expects 'rollback withArgs testTx
+        
+        // Test
+        instance.rollback(testTx)
+      }
+    }
+    
     "initialized with the alwaysTrue inclusionPredicate" must {
-      "delegate all operations" is (pending)
+      "delegate all file operations" is (pending)
     }
     
     "initialized with the alwaysFalse inclusionPredicate" must {
-      "not delegate any operation" is (pending)
+      "not delegate any file operation" is (pending)
     }
   }
 }

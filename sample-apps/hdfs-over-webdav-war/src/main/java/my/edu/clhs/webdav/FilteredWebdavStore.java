@@ -128,25 +128,23 @@ public class FilteredWebdavStore implements IWebdavStore {
     
     @Override
     public ITransaction begin(Principal principal) {
-        // TODO Auto-generated method stub
-        return null;
+        return delegate.begin(principal);
     }
     
     @Override
     public void checkAuthentication(ITransaction transaction) {
-        // TODO Auto-generated method stub
-    
+        delegate.checkAuthentication(transaction);
     }
     
     @Override
     public void commit(ITransaction transaction) {
-        // TODO Auto-generated method stub
+        delegate.commit(transaction);
     
     }
     
     @Override
     public void rollback(ITransaction transaction) {
-        // TODO Auto-generated method stub
+        delegate.rollback(transaction);
     
     }
     
