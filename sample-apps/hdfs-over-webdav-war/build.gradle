@@ -51,6 +51,7 @@ dependencies {
     
     testCompile(
         'junit:junit:4.+',
+        'org.scalamock:scalamock-scalatest-support_' + SCALA_VERSION + ':2.4',
         'org.scalatest:scalatest_' + SCALA_VERSION + ':1.8',
     )
     
