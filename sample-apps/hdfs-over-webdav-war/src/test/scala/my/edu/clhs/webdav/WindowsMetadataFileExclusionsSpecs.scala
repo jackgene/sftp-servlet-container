@@ -30,7 +30,7 @@ class WindowsMetadataFileExclusionsSpecs
     extends WordSpec with MustMatchersForJUnit {
     val filter = FilteredWebdavStore.WINDOWS_METADATA_FILE_EXCLUSIONS
     
-  "A WindowsMetadataFileExclusion Predicate" must {
+  "A WindowsMetadataFileExclusions Predicate" must {
     // MacOS metadata files
     "accept a plain .DS_Store file uri" in {
       filter.apply(".DS_Store") must be (true)
