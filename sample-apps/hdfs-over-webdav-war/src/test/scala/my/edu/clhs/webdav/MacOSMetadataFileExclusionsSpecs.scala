@@ -1,5 +1,5 @@
 /*
- * MacOSMetadataFileExclusionsSpecs.scala.scala
+ * MacOSMetadataFileExclusionsSpecs.scala
  *
  * Copyright 2012 Jack Leow
  *
