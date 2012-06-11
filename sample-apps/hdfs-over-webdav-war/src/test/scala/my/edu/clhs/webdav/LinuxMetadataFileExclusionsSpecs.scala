@@ -1,5 +1,5 @@
 /*
- * FilteredWebdavStoreSpecs.scala
+ * LinuxMetadataFileExclusionsSpecs.scala
  *
  * Copyright 2012 Jack Leow
  *
