@@ -19,16 +19,16 @@ package my.edu.clhs.webdav;
 
 import java.io.File;
 import java.io.InputStream;
-import java.net.URI;
 import java.security.Principal;
-
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 
 import net.sf.webdav.ITransaction;
 import net.sf.webdav.IWebdavStore;
 import net.sf.webdav.StoredObject;
 import net.sf.webdav.exceptions.AccessDeniedException;
+
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * FilteredWebdavStore that filters and accepts only certain URIs to be
@@ -44,6 +44,11 @@ import net.sf.webdav.exceptions.AccessDeniedException;
  * @author Jack Leow
  */
 public class FilteredWebdavStore implements IWebdavStore {
+    /**
+     * The default {@link #MAX_BANNED_FILE_SIZE} if none is specified.
+     */
+    public static final Long DEFAULT_MAX_BANNED_FILE_SIZE = 128*1024l;
+    
     /**
      * Filter predicate that excludes Linux metadata files.
      * Since Linux does not create these files, this filter does not
@@ -82,15 +87,43 @@ public class FilteredWebdavStore implements IWebdavStore {
     
     private final Long MAX_BANNED_FILE_SIZE;
     private final IWebdavStore delegate;
-    private final Predicate<String> inclusionPredicate;
+    private final Predicate<? super String> inclusionPredicate;
     
     public FilteredWebdavStore(
-            IWebdavStore delegate, Predicate<String> inclusionPredicate,
+            IWebdavStore delegate, Predicate<? super String> inclusionPredicate,
             Long maxBannedFileSize) {
-        // TODO check for null
+        if (delegate == null) {
+            throw new NullPointerException(
+                "delegate must be non-null.");
+        }
+        if (inclusionPredicate == null) {
+            throw new NullPointerException(
+                "inclusionPredicate must be non-null.");
+        }
+        if (maxBannedFileSize == null) {
+            throw new NullPointerException(
+                "maxBannedFileSize must be non-null.");
+        }
+        if (maxBannedFileSize < 0) {
+            throw new IllegalArgumentException(
+                "maxBannedFileSize must be positive.");
+        }
         this.delegate = delegate;
         this.inclusionPredicate = inclusionPredicate;
         MAX_BANNED_FILE_SIZE = maxBannedFileSize;
+    }
+    
+    public FilteredWebdavStore(IWebdavStore delegate) {
+        this(delegate,
+            Predicates.and(
+                ImmutableSet.of(
+                    LINUX_METADATA_FILE_EXCLUSIONS,
+                    MACOS_METADATA_FILE_EXCLUSIONS,
+                    WINDOWS_METADATA_FILE_EXCLUSIONS
+                )
+            ),
+            DEFAULT_MAX_BANNED_FILE_SIZE
+        );
     }
     
     @Override
