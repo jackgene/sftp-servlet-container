@@ -41,6 +41,41 @@ import net.sf.webdav.exceptions.AccessDeniedException;
  * @author Jack Leow
  */
 public class FilteredWebdavStore implements IWebdavStore {
+    /**
+     * Filter predicate that excludes Linux metadata files.
+     * Since Linux does not create these files, this filter does not
+     * exclude anything.
+     */
+    public static final Predicate<String> LINUX_METADATA_FILE_EXCLUSIONS =
+        new Predicate<String>() {
+            @Override
+            public boolean apply(String uri) {
+                throw new UnsupportedOperationException("pending");
+            }
+        };
+    /**
+     * Filter predicate that excludes MacOS metadata files such as
+     * .DS_Store and the ._.* files.
+     */
+    public static final Predicate<String> MACOS_METADATA_FILE_EXCLUSIONS =
+        new Predicate<String>() {
+            @Override
+            public boolean apply(String uri) {
+                throw new UnsupportedOperationException("pending");
+            }
+        };
+    /**
+     * Filter predicate that excludes Windows metadata files such as
+     * desktop.ini and Thumbs.db
+     */
+    public static final Predicate<String> WINDOWS_METADATA_FILE_EXCLUSIONS =
+        new Predicate<String>() {
+            @Override
+            public boolean apply(String uri) {
+                throw new UnsupportedOperationException("pending");
+            }
+        };
+    
     private final Long MAX_BANNED_FILE_SIZE;
     private final IWebdavStore delegate;
     private final Predicate<String> inclusionPredicate;
