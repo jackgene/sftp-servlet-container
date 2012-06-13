@@ -212,19 +212,24 @@ public class FilteredWebdavStore implements IWebdavStore {
     @Override
     public long getResourceLength(
             ITransaction transaction, String resourceUri) {
-        // TODO Auto-generated method stub
-        return 0;
+        return acceptsUri(resourceUri) ?
+            primaryStore.getResourceLength(transaction, resourceUri) :
+            rejectionStore.getResourceLength(transaction, resourceUri);
     }
     
     @Override
     public void removeObject(ITransaction transaction, String uri) {
-        // TODO Auto-generated method stub
-    
+        if (acceptsUri(uri)) {
+            primaryStore.removeObject(transaction, uri);
+        } else {
+            rejectionStore.removeObject(transaction, uri);
+        }
     }
     
     @Override
     public StoredObject getStoredObject(ITransaction transaction, String uri) {
-        // TODO Auto-generated method stub
-        return null;
+        return acceptsUri(uri) ?
+            primaryStore.getStoredObject(transaction, uri) :
+            rejectionStore.getStoredObject(transaction, uri);
     }
 }
