@@ -29,6 +29,7 @@ import org.scalatest.junit.JUnitRunner
 import org.scalatest.junit.MustMatchersForJUnit
 import org.scalatest.WordSpec
 import net.sf.webdav.ITransaction
+import net.sf.webdav.StoredObject
 
 /**
  * {@link FilteredWebdavStore} specifications.
@@ -156,9 +157,52 @@ class FilteredWebdavStoreSpecs extends WordSpec
       
       "delegate setResourceContent invocations to the primary store" is (pending)
       "delegate getChildrenNames invocations to both stores" is (pending)
-      "delegate getResourceLength invocations to the primary store" is (pending)
-      "delegate removeObject invocations to the primary store" is (pending)
-      "delegate getStoredObject invocations to the primary store" is (pending)
+      "delegate getResourceLength invocations to the primary store" in {
+        val testUri = "/tmp/file"
+        val testLength = 42l
+        
+        // Expectations
+        mockPrimaryStore expects 'getResourceLength withArgs (
+          mockTransaction, testUri
+        ) returning testLength
+        mockRejectionStore expects 'getResourceLength never
+        
+        // Test & Verify
+        val expectedLength = testLength
+        instance.getResourceLength(
+          mockTransaction, testUri) must equal (expectedLength)
+      }
+      
+      "delegate removeObject invocations to the primary store" in {
+        val testUri = "/tmp/file"
+        
+        // Expectations
+        mockPrimaryStore expects 'removeObject withArgs (
+          mockTransaction, testUri)
+        mockRejectionStore expects 'removeObject never
+        
+        // Test
+        instance.removeObject(mockTransaction, testUri)
+      }
+      
+      "delegate getStoredObject invocations to the primary store" in {
+        val testUri = "/tmp/file"
+        val mockStoredObject = new StoredObject()
+        
+        // Expectations
+        mockPrimaryStore expects 'getStoredObject withArgs (
+          mockTransaction, testUri
+        ) returning mockStoredObject
+        mockRejectionStore expects 'getStoredObject never
+        
+        // Test
+        val actualStoredObject =
+          instance.getStoredObject(mockTransaction, testUri)
+        
+        // Verify
+        val expectedStoredObject = mockStoredObject
+        (actualStoredObject) must be theSameInstanceAs (expectedStoredObject)
+      }
     }
     
     "initialized with an always false inclusion predicate" must {
@@ -212,9 +256,53 @@ class FilteredWebdavStoreSpecs extends WordSpec
       
       "delegate setResourceContent invocations to the rejection store" is (pending)
       "delegate getChildrenNames invocations to both stores" is (pending)
-      "delegate getResourceLength invocations to the rejection store" is (pending)
-      "delegate removeObject invocations to the rejection store" is (pending)
-      "delegate getStoredObject invocations to the rejection store" is (pending)
+      
+      "delegate getResourceLength invocations to the rejection store" in {
+        val testUri = "/tmp/file"
+        val testLength = 42l
+        
+        // Expectations
+        mockRejectionStore expects 'getResourceLength withArgs (
+          mockTransaction, testUri
+        ) returning testLength
+        mockPrimaryStore expects 'getResourceLength never
+        
+        // Test & Verify
+        val expectedLength = testLength
+        instance.getResourceLength(
+          mockTransaction, testUri) must equal (expectedLength)
+      }
+      
+      "delegate removeObject invocations to the rejection store" in {
+        val testUri = "/tmp/file"
+        
+        // Expectations
+        mockRejectionStore expects 'removeObject withArgs (
+          mockTransaction, testUri)
+        mockPrimaryStore expects 'removeObject never
+        
+        // Test
+        instance.removeObject(mockTransaction, testUri)
+      }
+      
+      "delegate getStoredObject invocations to the rejection store" in {
+        val testUri = "/tmp/file"
+        val mockStoredObject = new StoredObject()
+        
+        // Expectations
+        mockRejectionStore expects 'getStoredObject withArgs (
+          mockTransaction, testUri
+        ) returning mockStoredObject
+        mockPrimaryStore expects 'getStoredObject never
+        
+        // Test
+        val actualStoredObject =
+          instance.getStoredObject(mockTransaction, testUri)
+        
+        // Verify
+        val expectedStoredObject = mockStoredObject
+        (actualStoredObject) must be theSameInstanceAs (expectedStoredObject)
+      }
     }
   }
 }
