@@ -23,6 +23,7 @@ import java.security.Principal;
 
 import net.sf.webdav.ITransaction;
 import net.sf.webdav.IWebdavStore;
+import net.sf.webdav.LocalFileSystemStore;
 import net.sf.webdav.StoredObject;
 import net.sf.webdav.exceptions.AccessDeniedException;
 
@@ -32,23 +33,18 @@ import com.google.common.collect.ImmutableSet;
 
 /**
  * FilteredWebdavStore that filters and accepts only certain URIs to be
- * read and written to the underlying {@link IWebdavStore}.
+ * read and written to the primary underlying {@link IWebdavStore}.
  * 
  * The filter predicate is configurable, and resources rejected by the
- * predicate are stored in memory transiently if they are under a certain
- * size.
+ * predicate stored in a secondary, rejection {@link IWebdavStore} if
+ * one is configured.
  * 
- * Resources that are rejected <em>and</em> exceeds the size limit will
- * cause {@link AccessDeniedException} to be thrown.
+ * If no rejection store is configured, write operations to rejected
+ * URIs will result in an {@link AccessDeniedException}.
  *
  * @author Jack Leow
  */
 public class FilteredWebdavStore implements IWebdavStore {
-    /**
-     * The default {@link #MAX_BANNED_FILE_SIZE} if none is specified.
-     */
-    public static final Long DEFAULT_MAX_BANNED_FILE_SIZE = 128*1024l;
-    
     /**
      * Filter predicate that excludes Linux metadata files.
      * Since Linux does not create these files, this filter does not
@@ -85,36 +81,54 @@ public class FilteredWebdavStore implements IWebdavStore {
             }
         };
     
-    private final Long MAX_BANNED_FILE_SIZE;
-    private final IWebdavStore delegate;
+    private final IWebdavStore primaryStore;
+    private final IWebdavStore rejectionStore;
     private final Predicate<? super String> inclusionPredicate;
     
+    /**
+     * Creates a new FilteredWebdavStore.
+     * 
+     * @param inclusionPredicate URIs that this predicate matches will
+     *  be stored in the <tt>primaryStore</tt>; other URIs will be
+     *  stored in the <tt>rejectionStore</tt>.
+     * @param primaryStore the primary underlying store.
+     * @param rejectionStore the rejection store.
+     */
     public FilteredWebdavStore(
-            IWebdavStore delegate, Predicate<? super String> inclusionPredicate,
-            Long maxBannedFileSize) {
-        if (delegate == null) {
-            throw new NullPointerException(
-                "delegate must be non-null.");
-        }
+            Predicate<? super String> inclusionPredicate,
+            IWebdavStore primaryStore,
+            IWebdavStore rejectionStore) {
         if (inclusionPredicate == null) {
             throw new NullPointerException(
                 "inclusionPredicate must be non-null.");
         }
-        if (maxBannedFileSize == null) {
+        if (primaryStore == null) {
             throw new NullPointerException(
-                "maxBannedFileSize must be non-null.");
+                "primaryStore must be non-null.");
         }
-        if (maxBannedFileSize < 0) {
-            throw new IllegalArgumentException(
-                "maxBannedFileSize must be positive.");
+        if (rejectionStore == null) {
+            throw new NullPointerException(
+                "rejectionStore must be non-null.");
         }
-        this.delegate = delegate;
+        this.primaryStore = primaryStore;
         this.inclusionPredicate = inclusionPredicate;
-        MAX_BANNED_FILE_SIZE = maxBannedFileSize;
+        this.rejectionStore = rejectionStore;
     }
     
-    public FilteredWebdavStore(IWebdavStore delegate) {
-        this(delegate,
+    private static IWebdavStore defaultRejectionStore() {
+        File storeDir = new File(
+            System.getProperty("java.io.tmpdir"),
+            "FilteredWebdavStoreRejects");
+        
+        if (!storeDir.exists()) {
+            storeDir.mkdirs();
+        }
+        
+        return new LocalFileSystemStore(storeDir);
+    }
+    
+    public FilteredWebdavStore(IWebdavStore primaryStore) {
+        this(
             Predicates.and(
                 ImmutableSet.of(
                     LINUX_METADATA_FILE_EXCLUSIONS,
@@ -122,29 +136,30 @@ public class FilteredWebdavStore implements IWebdavStore {
                     WINDOWS_METADATA_FILE_EXCLUSIONS
                 )
             ),
-            DEFAULT_MAX_BANNED_FILE_SIZE
+            primaryStore,
+            defaultRejectionStore()
         );
     }
     
     @Override
     public ITransaction begin(Principal principal) {
-        return delegate.begin(principal);
+        return primaryStore.begin(principal);
     }
     
     @Override
     public void checkAuthentication(ITransaction transaction) {
-        delegate.checkAuthentication(transaction);
+        primaryStore.checkAuthentication(transaction);
     }
     
     @Override
     public void commit(ITransaction transaction) {
-        delegate.commit(transaction);
+        primaryStore.commit(transaction);
     
     }
     
     @Override
     public void rollback(ITransaction transaction) {
-        delegate.rollback(transaction);
+        primaryStore.rollback(transaction);
     
     }
     
