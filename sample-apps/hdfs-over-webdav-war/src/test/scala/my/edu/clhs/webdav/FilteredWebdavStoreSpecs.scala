@@ -34,87 +34,80 @@ import java.security.Principal
 @RunWith(classOf[JUnitRunner])
 class FilteredWebdavStoreSpecs extends WordSpec
     with MustMatchersForJUnit with MockFactory with ProxyMockFactory {
-  val mockStore = mock[IWebdavStore]
-  
   "A FilteredWebdavStore" must {
-    "complain when initialized with no delegate" in {
-      evaluating {
-        new FilteredWebdavStore(null, Predicates.alwaysTrue(), 0l)
-      } must produce [NullPointerException]
-    }
+    val mockStore = mock[IWebdavStore]
     
     "complain when initialized with no inclusionPredicate" in {
       evaluating {
-        new FilteredWebdavStore(mockStore, null, 0l)
+        new FilteredWebdavStore(null, mockStore, mockStore)
       } must produce[NullPointerException]
     }
     
-    "complain when initialized with no maxBannedFileSize" in {
+    "complain when initialized with no primaryStore" in {
       evaluating {
-        new FilteredWebdavStore(mockStore, Predicates.alwaysTrue(), null)
-      } must produce[NullPointerException]
+        new FilteredWebdavStore(Predicates.alwaysTrue(), null, mockStore)
+      } must produce [NullPointerException]
     }
     
-    "complain when initialized with a negative maxBannedFileSize value" in {
+    "complain when initialized with no rejectionStore" in {
       evaluating {
-        new FilteredWebdavStore(mockStore, Predicates.alwaysTrue(), -1)
-      } must produce[IllegalArgumentException]
+        new FilteredWebdavStore(
+            Predicates.alwaysTrue(), mockStore, null)
+      } must produce[NullPointerException]
     }
   }
   
   "A FilteredWebdavStore" when {
+    val mockTransaction = mock[ITransaction]
+    
     "properly initialized" must {
+      val mockStore = mock[IWebdavStore]
       val instance = new FilteredWebdavStore(mockStore)
       
-      "delegate begin invocations" in {
+      "delegate begin invocations to the primaryStore" in {
         // Test input
         val testPrin = mock[Principal]
-        val testTx = mock[ITransaction]
-        val expectedTx = testTx
+        val expectedTx = mockTransaction
         
         // Expectations
-        mockStore expects 'begin withArgs testPrin returning testTx
+        mockStore expects 'begin withArgs testPrin returning mockTransaction
         
         // Test & verify
         instance.begin(testPrin) must be theSameInstanceAs (expectedTx)
       }
       
-      "delegate checkAuthentication invocations" in {
-        val testTx = mock[ITransaction]
-        
+      "delegate checkAuthentication invocations to the primaryStore" in {
         // Expectations
-        mockStore expects 'checkAuthentication withArgs testTx
+        mockStore expects 'checkAuthentication withArgs mockTransaction
         
         // Test
-        instance.checkAuthentication(testTx)
+        instance.checkAuthentication(mockTransaction)
       }
       
-      "delegate commit invocations" in {
-        val testTx = mock[ITransaction]
-        
+      "delegate commit invocations to the primaryStore" in {
         // Expectations
-        mockStore expects 'commit withArgs testTx
+        mockStore expects 'commit withArgs mockTransaction
         
         // Test
-        instance.commit(testTx)
+        instance.commit(mockTransaction)
       }
       
-      "delegate rollback invocations" in {
-        val testTx = mock[ITransaction]
-        
+      "delegate rollback invocations to the primaryStore" in {
         // Expectations
-        mockStore expects 'rollback withArgs testTx
+        mockStore expects 'rollback withArgs mockTransaction
         
         // Test
-        instance.rollback(testTx)
+        instance.rollback(mockTransaction)
       }
     }
     
     "initialized with the alwaysTrue inclusionPredicate" must {
+      "delegate createFolder invocations to the primaryStore" is (pending)
       "delegate all file operations" is (pending)
     }
     
     "initialized with the alwaysFalse inclusionPredicate" must {
+      "not delegate createFolder invocations to the rejectionStore" is (pending)
       "not delegate any file operation" is (pending)
     }
   }
