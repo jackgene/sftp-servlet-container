@@ -17,6 +17,9 @@
  */
 package my.edu.clhs.webdav
 
+import java.io.ByteArrayInputStream
+import java.io.InputStream
+import java.security.Principal
 import com.google.common.base.Predicates
 import net.sf.webdav.IWebdavStore
 import org.junit.runner.RunWith
@@ -26,9 +29,10 @@ import org.scalatest.junit.JUnitRunner
 import org.scalatest.junit.MustMatchersForJUnit
 import org.scalatest.WordSpec
 import net.sf.webdav.ITransaction
-import java.security.Principal
 
 /**
+ * {@link FilteredWebdavStore} specifications.
+ * 
  * @author Jack Leow
  */
 @RunWith(classOf[JUnitRunner])
@@ -37,19 +41,19 @@ class FilteredWebdavStoreSpecs extends WordSpec
   "A FilteredWebdavStore" must {
     val mockStore = mock[IWebdavStore]
     
-    "complain when initialized with no inclusionPredicate" in {
+    "complain when initialized with no inclusion predicate" in {
       evaluating {
         new FilteredWebdavStore(null, mockStore, mockStore)
       } must produce[NullPointerException]
     }
     
-    "complain when initialized with no primaryStore" in {
+    "complain when initialized with no primary store" in {
       evaluating {
         new FilteredWebdavStore(Predicates.alwaysTrue(), null, mockStore)
       } must produce [NullPointerException]
     }
     
-    "complain when initialized with no rejectionStore" in {
+    "complain when initialized with no rejection store" in {
       evaluating {
         new FilteredWebdavStore(
             Predicates.alwaysTrue(), mockStore, null)
@@ -64,7 +68,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
       val mockStore = mock[IWebdavStore]
       val instance = new FilteredWebdavStore(mockStore)
       
-      "delegate begin invocations to the primaryStore" in {
+      "delegate begin invocations to the primary store" in {
         // Test input
         val testPrin = mock[Principal]
         val expectedTx = mockTransaction
@@ -76,7 +80,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         instance.begin(testPrin) must be theSameInstanceAs (expectedTx)
       }
       
-      "delegate checkAuthentication invocations to the primaryStore" in {
+      "delegate checkAuthentication invocations to the primary store" in {
         // Expectations
         mockStore expects 'checkAuthentication withArgs mockTransaction
         
@@ -84,7 +88,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         instance.checkAuthentication(mockTransaction)
       }
       
-      "delegate commit invocations to the primaryStore" in {
+      "delegate commit invocations to the primary store" in {
         // Expectations
         mockStore expects 'commit withArgs mockTransaction
         
@@ -92,7 +96,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         instance.commit(mockTransaction)
       }
       
-      "delegate rollback invocations to the primaryStore" in {
+      "delegate rollback invocations to the primary store" in {
         // Expectations
         mockStore expects 'rollback withArgs mockTransaction
         
@@ -101,14 +105,116 @@ class FilteredWebdavStoreSpecs extends WordSpec
       }
     }
     
-    "initialized with the alwaysTrue inclusionPredicate" must {
-      "delegate createFolder invocations to the primaryStore" is (pending)
-      "delegate all file operations" is (pending)
+    "initialized with an always true inclusion predicate" must {
+      val mockPrimaryStore = mock[IWebdavStore]
+      val mockRejectionStore = mock[IWebdavStore]
+      val instance = new FilteredWebdavStore(
+          Predicates.alwaysTrue(), mockPrimaryStore, mockRejectionStore)
+      
+      "delegate createFolder invocations to the primary store" in {
+        val testUri = "/tmp"
+        
+        // Expectations
+        mockPrimaryStore expects 'createFolder withArgs (
+          mockTransaction, testUri)
+        mockRejectionStore expects 'createFolder never
+        
+        // Test
+        instance.createFolder(mockTransaction, testUri)
+      }
+      
+      "delegate createResource invocations to the primary store" in {
+        val testUri = "/tmp/file"
+        
+        // Expectations
+        mockPrimaryStore expects 'createResource withArgs (
+          mockTransaction, testUri)
+        mockRejectionStore expects 'createResource never
+        
+        // Test
+        instance.createResource(mockTransaction, testUri)
+      }
+      
+      "delegate getResourceContent invocations to the primary store" in {
+        val testUri = "/tmp/file"
+        val mockInputStream = new ByteArrayInputStream(new Array[Byte](0))
+        
+        // Expectations
+        mockPrimaryStore expects 'getResourceContent withArgs (
+          mockTransaction, testUri
+        ) returning mockInputStream
+        mockRejectionStore expects 'getResourceContent never
+        
+        // Test
+        val actualInputStream =
+          instance.getResourceContent(mockTransaction, testUri)
+        
+        // Verify
+        val expectedInputStream = mockInputStream
+        (actualInputStream) must equal (expectedInputStream)
+      }
+      
+      "delegate setResourceContent invocations to the primary store" is (pending)
+      "delegate getChildrenNames invocations to both stores" is (pending)
+      "delegate getResourceLength invocations to the primary store" is (pending)
+      "delegate removeObject invocations to the primary store" is (pending)
+      "delegate getStoredObject invocations to the primary store" is (pending)
     }
     
-    "initialized with the alwaysFalse inclusionPredicate" must {
-      "not delegate createFolder invocations to the rejectionStore" is (pending)
-      "not delegate any file operation" is (pending)
+    "initialized with an always false inclusion predicate" must {
+      val mockPrimaryStore = mock[IWebdavStore]
+      val mockRejectionStore = mock[IWebdavStore]
+      val instance = new FilteredWebdavStore(
+          Predicates.alwaysFalse(), mockPrimaryStore, mockRejectionStore)
+      
+      "delegate createFolder invocations to the rejection store" in {
+        val testUri = "/tmp"
+        
+        // Expectations
+        mockRejectionStore expects 'createFolder withArgs (
+          mockTransaction, testUri)
+        mockPrimaryStore expects 'createFolder never
+        
+        // Test
+        instance.createFolder(mockTransaction, testUri)
+      }
+      
+      "delegate createResource invocations to the rejection store" in {
+        val testUri = "/tmp"
+        
+        // Expectations
+        mockRejectionStore expects 'createResource withArgs (
+          mockTransaction, testUri)
+        mockPrimaryStore expects 'createResource never
+        
+        // Test
+        instance.createResource(mockTransaction, testUri)
+      }
+      
+      "delegate getResourceContent invocations to the rejection store" in {
+        val testUri = "/tmp/file"
+        val mockInputStream = new ByteArrayInputStream(new Array[Byte](0))
+        
+        // Expectations
+        mockRejectionStore expects 'getResourceContent withArgs (
+          mockTransaction, testUri
+        ) returning mockInputStream
+        mockPrimaryStore expects 'getResourceContent never
+        
+        // Test
+        val actualInputStream =
+          instance.getResourceContent(mockTransaction, testUri)
+        
+        // Verify
+        val expectedInputStream = mockInputStream
+        (actualInputStream) must equal (expectedInputStream)
+      }
+      
+      "delegate setResourceContent invocations to the rejection store" is (pending)
+      "delegate getChildrenNames invocations to both stores" is (pending)
+      "delegate getResourceLength invocations to the rejection store" is (pending)
+      "delegate removeObject invocations to the rejection store" is (pending)
+      "delegate getStoredObject invocations to the rejection store" is (pending)
     }
   }
 }

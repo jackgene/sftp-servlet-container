@@ -163,23 +163,35 @@ public class FilteredWebdavStore implements IWebdavStore {
     
     }
     
+    private boolean acceptsUri(String uri) {
+        return inclusionPredicate.apply(uri);
+    }
+    
     @Override
     public void createFolder(ITransaction transaction, String folderUri) {
-        // TODO Auto-generated method stub
+        if (acceptsUri(folderUri)) {
+            primaryStore.createFolder(transaction, folderUri);
+        } else {
+            rejectionStore.createFolder(transaction, folderUri);
+        }
     
     }
     
     @Override
     public void createResource(ITransaction transaction, String resourceUri) {
-        // TODO Auto-generated method stub
-    
+        if (acceptsUri(resourceUri)) {
+            primaryStore.createResource(transaction, resourceUri);
+        } else {
+            rejectionStore.createResource(transaction, resourceUri);
+        }
     }
     
     @Override
     public InputStream getResourceContent(
             ITransaction transaction, String resourceUri) {
-        // TODO Auto-generated method stub
-        return null;
+        return acceptsUri(resourceUri) ?
+            primaryStore.getResourceContent(transaction, resourceUri) :
+            rejectionStore.getResourceContent(transaction, resourceUri);
     }
     
     @Override
