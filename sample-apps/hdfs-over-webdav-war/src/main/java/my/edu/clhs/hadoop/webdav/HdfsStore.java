@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import javax.naming.Context;
@@ -58,7 +57,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 /**
@@ -68,8 +66,6 @@ import com.google.common.collect.Lists;
  */
 public class HdfsStore implements IWebdavStore {
     public static final String HDFS_ROOT_URI_JNDI_NAME = "hdfsRootUri";
-    private static final Set<String> BANNED_FILES = ImmutableSet.of(
-        "Thumbs.db", "desktop.ini", ".DS_Store");
     private static final Logger log =
         LoggerFactory.getLogger(HdfsStore.class);
     
@@ -285,14 +281,12 @@ public class HdfsStore implements IWebdavStore {
         HdfsTransaction hdfsTx = (HdfsTransaction)transaction;
         FileSystem hdfs = hdfsTx.getFileSystem();
         
-        if (!BANNED_FILES.contains(path.getName())) {
-            try {
-                hdfs.createNewFile(path);
-            } catch (AccessControlException e) {
-                throw new AccessDeniedException(e);
-            } catch (IOException e) {
-                throw new WebdavException(e);
-            }
+        try {
+            hdfs.createNewFile(path);
+        } catch (AccessControlException e) {
+            throw new AccessDeniedException(e);
+        } catch (IOException e) {
+            throw new WebdavException(e);
         }
         hdfsTx.pushOperation("createResource(" + resourceUri + ")");
     }
@@ -328,54 +322,39 @@ public class HdfsStore implements IWebdavStore {
         FileSystem hdfs = hdfsTx.getFileSystem();
         
         FSDataOutputStream out = null;
-        if (!BANNED_FILES.contains(path.getName())) {
-            try {
-                out = hdfs.create(path, true);
-                
-                int read;
-                byte[] buf = new byte[64*1024];
-                int counter = 0;
-                while ((read = content.read(buf)) != -1) {
-                    out.write(buf, 0, read);
-                    numBytesWritten += read;
-                    if (log.isTraceEnabled()) {
-                        if (++counter % 1024 == 0) {
-                            log.trace("Writing file " + resourceUri + ":\n" +
-                                "chunk # " + counter + "\n" +
-                                "size of current chunk: " + read + "\n" +
-                                "kilobytes written so far: " +
-                                (numBytesWritten / 1024));
-                        }
+        try {
+            out = hdfs.create(path, true);
+            
+            int read;
+            byte[] buf = new byte[64*1024];
+            int counter = 0;
+            while ((read = content.read(buf)) != -1) {
+                out.write(buf, 0, read);
+                numBytesWritten += read;
+                if (log.isTraceEnabled()) {
+                    if (++counter % 1024 == 0) {
+                        log.trace("Writing file " + resourceUri + ":\n" +
+                            "chunk # " + counter + "\n" +
+                            "size of current chunk: " + read + "\n" +
+                            "kilobytes written so far: " +
+                            (numBytesWritten / 1024));
                     }
                 }
-            } catch (AccessControlException e) {
-                throw new AccessDeniedException(e);
-            } catch (IOException e) {
-                throw new WebdavException(e);
-            } finally {
-                try {
-                    if (out != null) out.close();
-                } catch (IOException e) {
-                    log.warn("Failed to close output stream.", e);
-                }
-                try {
-                    content.close();
-                } catch (IOException e) {
-                    log.warn("Failed to close input stream.", e);
-                }
             }
-        } else {
-            // Does not actually write to HDFS
-            // Just read the stream and get the count.
+        } catch (AccessControlException e) {
+            throw new AccessDeniedException(e);
+        } catch (IOException e) {
+            throw new WebdavException(e);
+        } finally {
             try {
-                int read;
-                byte[] buf = new byte[64*1024];
-                
-                while ((read = content.read(buf, 0, buf.length)) != -1) {
-                    numBytesWritten += read;
-                }
+                if (out != null) out.close();
             } catch (IOException e) {
-                throw new WebdavException(e);
+                log.warn("Failed to close output stream.", e);
+            }
+            try {
+                content.close();
+            } catch (IOException e) {
+                log.warn("Failed to close input stream.", e);
             }
         }
         hdfsTx.pushOperation("setResourceContent(" + resourceUri + ")");
@@ -454,14 +433,6 @@ public class HdfsStore implements IWebdavStore {
                 so.setLastModified(new Date(fileStatus.getModificationTime()));
                 so.setCreationDate(new Date(fileStatus.getModificationTime()));
                 so.setResourceLength(fileStatus.getLen());
-            } else if (BANNED_FILES.contains(path.getName())) {
-                final Date now = new Date();
-                so =  new StoredObject();
-                
-                so.setFolder(false);
-                so.setLastModified(now);
-                so.setCreationDate(now);
-                so.setResourceLength(0);
             }
         } catch (IOException e) {
             throw new WebdavException(e);
