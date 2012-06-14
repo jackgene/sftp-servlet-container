@@ -212,19 +212,32 @@ public class FilteredWebdavStore implements IWebdavStore {
     @Override
     public String[] getChildrenNames(
             ITransaction transaction, String folderUri) {
-        Set<String> combinedNames = new HashSet<String>();
+        String[] childrenNames;
         
-        String[] names;
-        names = primaryStore.getChildrenNames(transaction, folderUri);
-        for (String name : names) {
-            combinedNames.add(name);
-        }
-        names = rejectionStore.getChildrenNames(transaction, folderUri);
-        for (String name : names) {
-            combinedNames.add(name);
+        String[] primaryStoreNames =
+            primaryStore.getChildrenNames(transaction, folderUri);
+        String[] rejectionStoreNames =
+            rejectionStore.getChildrenNames(transaction, folderUri);
+        if (primaryStoreNames == null && rejectionStoreNames == null) {
+            childrenNames = null;
+        } else {
+            Set<String> combinedNames = new HashSet<String>();
+            
+            if (primaryStoreNames != null) {
+                for (String name : primaryStoreNames) {
+                    combinedNames.add(name);
+                }
+            }
+            if (rejectionStoreNames != null) {
+                for (String name : rejectionStoreNames) {
+                    combinedNames.add(name);
+                }
+            }
+            childrenNames =
+                combinedNames.toArray(new String[combinedNames.size()]);
         }
         
-        return combinedNames.toArray(new String[combinedNames.size()]);
+        return childrenNames;
     }
     
     @Override

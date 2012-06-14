@@ -66,8 +66,10 @@ class FilteredWebdavStoreSpecs extends WordSpec
     val mockTransaction = mock[ITransaction]
     
     "properly initialized" must {
-      val mockStore = mock[IWebdavStore]
-      val instance = new FilteredWebdavStore(mockStore)
+      val mockPrimaryStore = mock[IWebdavStore]
+      val mockRejectionStore = mock[IWebdavStore]
+      val instance = new FilteredWebdavStore(
+        Predicates.alwaysTrue(), mockPrimaryStore, mockRejectionStore)
       
       "delegate begin invocations to the primary store" in {
         // Test input
@@ -75,7 +77,8 @@ class FilteredWebdavStoreSpecs extends WordSpec
         val expectedTx = mockTransaction
         
         // Expectations
-        mockStore expects 'begin withArgs testPrin returning mockTransaction
+        mockPrimaryStore expects 'begin withArgs (
+          testPrin) returning mockTransaction
         
         // Test & verify
         instance.begin(testPrin) must be theSameInstanceAs (expectedTx)
@@ -83,7 +86,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
       
       "delegate checkAuthentication invocations to the primary store" in {
         // Expectations
-        mockStore expects 'checkAuthentication withArgs mockTransaction
+        mockPrimaryStore expects 'checkAuthentication withArgs mockTransaction
         
         // Test
         instance.checkAuthentication(mockTransaction)
@@ -91,7 +94,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
       
       "delegate commit invocations to the primary store" in {
         // Expectations
-        mockStore expects 'commit withArgs mockTransaction
+        mockPrimaryStore expects 'commit withArgs mockTransaction
         
         // Test
         instance.commit(mockTransaction)
@@ -99,10 +102,61 @@ class FilteredWebdavStoreSpecs extends WordSpec
       
       "delegate rollback invocations to the primary store" in {
         // Expectations
-        mockStore expects 'rollback withArgs mockTransaction
+        mockPrimaryStore expects 'rollback withArgs mockTransaction
         
         // Test
         instance.rollback(mockTransaction)
+      }
+      
+      "have null childrenNames if both its stores have null childrenNames" in {
+        val testUri = "/tmp"
+        
+        // Expectations
+        mockPrimaryStore expects 'getChildrenNames withArgs (
+          mockTransaction, testUri
+        ) returning null
+        mockRejectionStore expects 'getChildrenNames withArgs (
+          mockTransaction, testUri
+        ) returning null
+        
+        // Test & Verify
+        instance.getChildrenNames(mockTransaction, testUri) must be (null)
+      }
+      
+      "include childrenNames from its primaryStore" in {
+        val testUri = "/tmp"
+        val testFile = "file"
+        
+        // Expectations
+        mockPrimaryStore expects 'getChildrenNames withArgs (
+          mockTransaction, testUri
+        ) returning Array(testFile)
+        mockRejectionStore expects 'getChildrenNames withArgs (
+          mockTransaction, testUri
+        ) returning null
+        
+        // Test & Verify
+        val expectedNames = List(testFile)
+        instance.getChildrenNames(
+          mockTransaction, testUri).toList.sorted must equal (expectedNames)
+      }
+      
+      "include childrenNames from its rejectionStore" in {
+        val testUri = "/tmp"
+        val testFile = "file"
+        
+        // Expectations
+        mockPrimaryStore expects 'getChildrenNames withArgs (
+          mockTransaction, testUri
+        ) returning null
+        mockRejectionStore expects 'getChildrenNames withArgs (
+          mockTransaction, testUri
+        ) returning Array(testFile)
+        
+        // Test & Verify
+        val expectedNames = List(testFile)
+        instance.getChildrenNames(
+          mockTransaction, testUri).toList.sorted must equal (expectedNames)
       }
     }
     
