@@ -20,6 +20,8 @@ package my.edu.clhs.webdav;
 import java.io.File;
 import java.io.InputStream;
 import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
 
 import net.sf.webdav.ITransaction;
 import net.sf.webdav.IWebdavStore;
@@ -210,8 +212,19 @@ public class FilteredWebdavStore implements IWebdavStore {
     @Override
     public String[] getChildrenNames(
             ITransaction transaction, String folderUri) {
-        // TODO Auto-generated method stub
-        return null;
+        List<String> combinedNames = new ArrayList<String>();
+        
+        String[] names;
+        names = primaryStore.getChildrenNames(transaction, folderUri);
+        for (String name : names) {
+            combinedNames.add(name);
+        }
+        names = rejectionStore.getChildrenNames(transaction, folderUri);
+        for (String name : names) {
+            combinedNames.add(name);
+        }
+        
+        return combinedNames.toArray(new String[combinedNames.size()]);
     }
     
     @Override

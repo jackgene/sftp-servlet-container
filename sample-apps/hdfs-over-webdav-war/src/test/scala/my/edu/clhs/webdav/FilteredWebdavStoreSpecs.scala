@@ -177,7 +177,25 @@ class FilteredWebdavStoreSpecs extends WordSpec
         ) must equal (expectedLength)
       }
       
-      "delegate getChildrenNames invocations to both stores" is (pending)
+      "delegate getChildrenNames invocations to both stores" in {
+        val testUri = "/tmp"
+        val testFile1 = "file1"
+        val testFile2 = "file2"
+        
+        // Expectations
+        mockPrimaryStore expects 'getChildrenNames withArgs (
+          mockTransaction, testUri
+        ) returning Array(testFile1)
+        mockRejectionStore expects 'getChildrenNames withArgs (
+          mockTransaction, testUri
+        ) returning Array(testFile2)
+        
+        // Test & Verify
+        val expectedNames = Set(testFile1, testFile2)
+        instance.getChildrenNames(
+          mockTransaction, testUri).toSet must equal (expectedNames)
+      }
+      
       "delegate getResourceLength invocations to the primary store" in {
         val testUri = "/tmp/file"
         val testLength = 42l
@@ -297,7 +315,24 @@ class FilteredWebdavStoreSpecs extends WordSpec
         ) must equal (expectedLength)
       }
       
-      "delegate getChildrenNames invocations to both stores" is (pending)
+      "delegate getChildrenNames invocations to both stores" in {
+        val testUri = "/tmp"
+        val testFile1 = "file1"
+        val testFile2 = "file2"
+        
+        // Expectations
+        mockPrimaryStore expects 'getChildrenNames withArgs (
+          mockTransaction, testUri
+        ) returning Array(testFile1)
+        mockRejectionStore expects 'getChildrenNames withArgs (
+          mockTransaction, testUri
+        ) returning Array(testFile2)
+        
+        // Test & Verify
+        val expectedNames = Set(testFile1, testFile2)
+        instance.getChildrenNames(
+          mockTransaction, testUri).toSet must equal (expectedNames)
+      }
       
       "delegate getResourceLength invocations to the rejection store" in {
         val testUri = "/tmp/file"
