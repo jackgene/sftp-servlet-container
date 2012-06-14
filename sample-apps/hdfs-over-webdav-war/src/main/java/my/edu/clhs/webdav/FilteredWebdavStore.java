@@ -198,8 +198,13 @@ public class FilteredWebdavStore implements IWebdavStore {
     public long setResourceContent(ITransaction transaction,
             String resourceUri, InputStream content, String contentType,
             String characterEncoding) {
-        // TODO Auto-generated method stub
-        return 0;
+        return acceptsUri(resourceUri) ?
+            primaryStore.setResourceContent(
+                transaction, resourceUri, content,
+                contentType, characterEncoding) :
+            rejectionStore.setResourceContent(
+                transaction, resourceUri, content,
+                contentType, characterEncoding);
     }
     
     @Override

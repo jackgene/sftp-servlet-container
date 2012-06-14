@@ -138,12 +138,12 @@ class FilteredWebdavStoreSpecs extends WordSpec
       
       "delegate getResourceContent invocations to the primary store" in {
         val testUri = "/tmp/file"
-        val mockInputStream = new ByteArrayInputStream(new Array[Byte](0))
+        val testInputStream = new ByteArrayInputStream(new Array[Byte](0))
         
         // Expectations
         mockPrimaryStore expects 'getResourceContent withArgs (
           mockTransaction, testUri
-        ) returning mockInputStream
+        ) returning testInputStream
         mockRejectionStore expects 'getResourceContent never
         
         // Test
@@ -151,11 +151,32 @@ class FilteredWebdavStoreSpecs extends WordSpec
           instance.getResourceContent(mockTransaction, testUri)
         
         // Verify
-        val expectedInputStream = mockInputStream
+        val expectedInputStream = testInputStream
         (actualInputStream) must equal (expectedInputStream)
       }
       
-      "delegate setResourceContent invocations to the primary store" is (pending)
+      "delegate setResourceContent invocations to the primary store" in {
+        val testUri = "/tmp/file"
+        val testInputStream = new ByteArrayInputStream(new Array[Byte](0))
+        val testContentType = "text/plain"
+        val testEncoding = "UTF-8"
+        val testLength = 42l
+        
+        // Expectations
+        mockPrimaryStore expects 'setResourceContent withArgs (
+          mockTransaction, testUri, testInputStream,
+          testContentType, testEncoding
+        ) returning testLength
+        mockRejectionStore expects 'setResourceContent never
+        
+        // Test & Verify
+        val expectedLength = testLength
+        instance.setResourceContent(
+          mockTransaction, testUri, testInputStream,
+          testContentType, testEncoding
+        ) must equal (expectedLength)
+      }
+      
       "delegate getChildrenNames invocations to both stores" is (pending)
       "delegate getResourceLength invocations to the primary store" in {
         val testUri = "/tmp/file"
@@ -209,7 +230,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
       val mockPrimaryStore = mock[IWebdavStore]
       val mockRejectionStore = mock[IWebdavStore]
       val instance = new FilteredWebdavStore(
-          Predicates.alwaysFalse(), mockPrimaryStore, mockRejectionStore)
+        Predicates.alwaysFalse(), mockPrimaryStore, mockRejectionStore)
       
       "delegate createFolder invocations to the rejection store" in {
         val testUri = "/tmp"
@@ -254,7 +275,28 @@ class FilteredWebdavStoreSpecs extends WordSpec
         (actualInputStream) must equal (expectedInputStream)
       }
       
-      "delegate setResourceContent invocations to the rejection store" is (pending)
+      "delegate setResourceContent invocations to the rejection store" in {
+        val testUri = "/tmp/file"
+        val testInputStream = new ByteArrayInputStream(new Array[Byte](0))
+        val testContentType = "text/plain"
+        val testEncoding = "UTF-8"
+        val testLength = 42l
+        
+        // Expectations
+        mockRejectionStore expects 'setResourceContent withArgs (
+          mockTransaction, testUri, testInputStream,
+          testContentType, testEncoding
+        ) returning testLength
+        mockPrimaryStore expects 'setResourceContent never
+        
+        // Test & Verify
+        val expectedLength = testLength
+        instance.setResourceContent(
+          mockTransaction, testUri, testInputStream,
+          testContentType, testEncoding
+        ) must equal (expectedLength)
+      }
+      
       "delegate getChildrenNames invocations to both stores" is (pending)
       
       "delegate getResourceLength invocations to the rejection store" in {
