@@ -65,7 +65,7 @@ public class FilteredWebdavStore implements IWebdavStore {
             public boolean apply(String uri) {
                 String file = new File(uri).getName();
                 
-                return !file.equals(".DS_Store") && !file.startsWith("._.");
+                return !file.equals(".DS_Store") && !file.startsWith("._");
             }
         };
     

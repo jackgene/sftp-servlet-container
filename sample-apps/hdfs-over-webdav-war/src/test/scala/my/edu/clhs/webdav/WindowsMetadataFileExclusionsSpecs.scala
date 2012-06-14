@@ -35,14 +35,14 @@ class WindowsMetadataFileExclusionsSpecs
     "accept a plain .DS_Store file uri" in {
       filter.apply(".DS_Store") must be (true)
     }
-    "accept a plain ._.* file uri" in {
-      filter.apply("._.file.txt") must be (true)
+    "accept a plain ._* file uri" in {
+      filter.apply("._file.txt") must be (true)
     }
     "accept a nested .DS_Store file uri" in {
       filter.apply("/Users/webdav/.DS_Store") must be (true)
     }
-    "accept a nested ._.* file uri" in {
-      filter.apply("/Users/webdav/._.file.txt") must be (true)
+    "accept a nested ._* file uri" in {
+      filter.apply("/Users/webdav/._file.txt") must be (true)
     }
     
     // Windows metadata files
