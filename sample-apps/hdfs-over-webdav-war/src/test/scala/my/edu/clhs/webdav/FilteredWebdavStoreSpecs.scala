@@ -179,21 +179,22 @@ class FilteredWebdavStoreSpecs extends WordSpec
       
       "delegate getChildrenNames invocations to both stores" in {
         val testUri = "/tmp"
+        val testFile0 = "file0"
         val testFile1 = "file1"
         val testFile2 = "file2"
         
         // Expectations
         mockPrimaryStore expects 'getChildrenNames withArgs (
           mockTransaction, testUri
-        ) returning Array(testFile1)
+        ) returning Array(testFile0, testFile1)
         mockRejectionStore expects 'getChildrenNames withArgs (
           mockTransaction, testUri
-        ) returning Array(testFile2)
+        ) returning Array(testFile0, testFile2)
         
         // Test & Verify
-        val expectedNames = Set(testFile1, testFile2)
+        val expectedNames = List(testFile0, testFile1, testFile2)
         instance.getChildrenNames(
-          mockTransaction, testUri).toSet must equal (expectedNames)
+          mockTransaction, testUri).toList.sorted must equal (expectedNames)
       }
       
       "delegate getResourceLength invocations to the primary store" in {
@@ -317,21 +318,22 @@ class FilteredWebdavStoreSpecs extends WordSpec
       
       "delegate getChildrenNames invocations to both stores" in {
         val testUri = "/tmp"
+        val testFile0 = "file0"
         val testFile1 = "file1"
         val testFile2 = "file2"
         
         // Expectations
         mockPrimaryStore expects 'getChildrenNames withArgs (
           mockTransaction, testUri
-        ) returning Array(testFile1)
+        ) returning Array(testFile0, testFile1)
         mockRejectionStore expects 'getChildrenNames withArgs (
           mockTransaction, testUri
-        ) returning Array(testFile2)
+        ) returning Array(testFile0, testFile2)
         
         // Test & Verify
-        val expectedNames = Set(testFile1, testFile2)
+        val expectedNames = List(testFile0, testFile1, testFile2)
         instance.getChildrenNames(
-          mockTransaction, testUri).toSet must equal (expectedNames)
+          mockTransaction, testUri).toList.sorted must equal (expectedNames)
       }
       
       "delegate getResourceLength invocations to the rejection store" in {

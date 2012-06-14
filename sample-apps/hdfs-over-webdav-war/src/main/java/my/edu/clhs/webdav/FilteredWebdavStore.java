@@ -20,8 +20,8 @@ package my.edu.clhs.webdav;
 import java.io.File;
 import java.io.InputStream;
 import java.security.Principal;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import net.sf.webdav.ITransaction;
 import net.sf.webdav.IWebdavStore;
@@ -212,7 +212,7 @@ public class FilteredWebdavStore implements IWebdavStore {
     @Override
     public String[] getChildrenNames(
             ITransaction transaction, String folderUri) {
-        List<String> combinedNames = new ArrayList<String>();
+        Set<String> combinedNames = new HashSet<String>();
         
         String[] names;
         names = primaryStore.getChildrenNames(transaction, folderUri);
