@@ -96,8 +96,8 @@ eclipse {
                                 def rightName = right.name
                                 // resources come last, else normal sort order
                                 return leftName == 'resources' ?
-                                    (rightName == 'resources' ? 0 : -1) :
-                                    (rightName == 'resources' ? 1 :
+                                    (rightName == 'resources' ? 0 : 1) :
+                                    (rightName == 'resources' ? -1 :
                                         (leftName).compareTo(rightName))
                             }
                         } else if (kind == 'lib') {
