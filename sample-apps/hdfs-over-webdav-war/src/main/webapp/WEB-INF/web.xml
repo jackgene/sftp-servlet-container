@@ -10,7 +10,7 @@
     
     <init-param>
       <param-name>ResourceHandlerImplementation</param-name>
-      <param-value>my.edu.clhs.hadoop.webdav.FilteredHdfsStore</param-value>
+      <param-value>my.edu.clhs.hadoop.webdav.HdfsStore$Filtered</param-value>
     </init-param>
     <init-param>
       <param-name>rootpath</param-name>
