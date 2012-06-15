@@ -35,6 +35,7 @@ import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
+import my.edu.clhs.webdav.FilteredWebdavStore;
 import net.sf.webdav.ITransaction;
 import net.sf.webdav.IWebdavStore;
 import net.sf.webdav.StoredObject;
@@ -65,6 +66,12 @@ import com.google.common.collect.Lists;
  * @author Jack Leow
  */
 public class HdfsStore implements IWebdavStore {
+    public static class Filtered extends FilteredWebdavStore {
+        public Filtered(File root) {
+            super(new HdfsStore(root));
+        }
+    }
+    
     public static final String HDFS_ROOT_URI_JNDI_NAME = "hdfsRootUri";
     private static final Logger log =
         LoggerFactory.getLogger(HdfsStore.class);
