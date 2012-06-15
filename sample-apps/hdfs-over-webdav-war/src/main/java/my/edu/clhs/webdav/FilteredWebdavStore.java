@@ -173,6 +173,7 @@ public class FilteredWebdavStore implements IWebdavStore {
     public void createFolder(ITransaction transaction, String folderUri) {
         if (acceptsUri(folderUri)) {
             primaryStore.createFolder(transaction, folderUri);
+            rejectionStore.createFolder(transaction, folderUri);
         } else {
             rejectionStore.createFolder(transaction, folderUri);
         }
@@ -209,6 +210,25 @@ public class FilteredWebdavStore implements IWebdavStore {
                 contentType, characterEncoding);
     }
     
+    /**
+     * Creates folders and any missing parent folders recusively on the
+     * given store.
+     * 
+     * @param store {@link IWebdavStore} to create folders in.
+     * @param transaction the current transaction.
+     * @param folderUri URI of folder to create.
+     */
+    private static void createFolders(
+            IWebdavStore store, ITransaction transaction, String folderUri) {
+        String parentUri = new File(folderUri).getParent();
+        
+        if (parentUri != null &&
+                store.getStoredObject(transaction, parentUri) == null) {
+            createFolders(store, transaction, parentUri);
+        }
+        store.createFolder(transaction, folderUri);
+    }
+    
     @Override
     public String[] getChildrenNames(
             ITransaction transaction, String folderUri) {
@@ -226,6 +246,9 @@ public class FilteredWebdavStore implements IWebdavStore {
             if (primaryStoreNames != null) {
                 for (String name : primaryStoreNames) {
                     combinedNames.add(name);
+                }
+                if (rejectionStoreNames == null) {
+                    createFolders(rejectionStore, transaction, folderUri);
                 }
             }
             if (rejectionStoreNames != null) {
