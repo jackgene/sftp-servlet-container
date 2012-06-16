@@ -32,35 +32,35 @@ class MacOSMetadataFileExclusionsSpecs
     val filter = FilteredWebdavStore.MACOS_METADATA_FILE_EXCLUSIONS
     
     // MacOS metadata files
-    "reject a plain .DS_Store file uri" in {
+    "reject a plain .DS_Store file uri." in {
       filter.apply(".DS_Store") must be (false)
     }
-    "reject a plain ._* file uri" in {
+    "reject a plain ._* file uri." in {
       filter.apply("._file.txt") must be (false)
     }
-    "reject a nested .DS_Store file uri" in {
+    "reject a nested .DS_Store file uri." in {
       filter.apply("/Users/webdav/.DS_Store") must be (false)
     }
-    "reject a nested ._* file uri" in {
+    "reject a nested ._* file uri." in {
       filter.apply("/Users/webdav/._file.txt") must be (false)
     }
     
     // Windows metadata files
-    "accept a plain desktop.ini file uri" in {
+    "accept a plain desktop.ini file uri." in {
       filter.apply("desktop.ini") must be (true)
     }
-    "accept a plain Thumbs.db file uri" in {
+    "accept a plain Thumbs.db file uri." in {
       filter.apply("Thumbs.db") must be (true)
     }
-    "accept a nested desktop.ini file uri" in {
+    "accept a nested desktop.ini file uri." in {
       filter.apply("/Users/webdav/desktop.ini") must be (true)
     }
-    "accept a nested Thumbs.db file uri" in {
+    "accept a nested Thumbs.db file uri." in {
       filter.apply("/Users/webdav/Thumbs.db") must be (true)
     }
     
     // Other files
-    "accept a regular file uri" in {
+    "accept a regular file uri." in {
       filter.apply("/Users/webdav/file.txt") must be (true)
     }
   }

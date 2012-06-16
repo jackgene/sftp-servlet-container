@@ -42,19 +42,19 @@ class FilteredWebdavStoreSpecs extends WordSpec
   "A FilteredWebdavStore" must {
     val mockStore = mock[IWebdavStore]
     
-    "complain when initialized with no inclusion predicate" in {
+    "complain when initialized with no inclusion predicate." in {
       evaluating {
         new FilteredWebdavStore(null, mockStore, mockStore)
       } must produce[NullPointerException]
     }
     
-    "complain when initialized with no primary store" in {
+    "complain when initialized with no primary store." in {
       evaluating {
         new FilteredWebdavStore(Predicates.alwaysTrue(), null, mockStore)
       } must produce [NullPointerException]
     }
     
-    "complain when initialized with no rejection store" in {
+    "complain when initialized with no rejection store." in {
       evaluating {
         new FilteredWebdavStore(
             Predicates.alwaysTrue(), mockStore, null)
@@ -62,16 +62,16 @@ class FilteredWebdavStoreSpecs extends WordSpec
     }
   }
   
-  "A FilteredWebdavStore" when {
+  "A FilteredWebdavStore," when {
     val mockTransaction = mock[ITransaction]
     
-    "properly initialized" must {
+    "properly initialized," must {
       val mockPrimaryStore = mock[IWebdavStore]
       val mockRejectionStore = mock[IWebdavStore]
       val instance = new FilteredWebdavStore(
         Predicates.alwaysTrue(), mockPrimaryStore, mockRejectionStore)
       
-      "delegate begin invocations to the primary store" in {
+      "delegate begin invocations to the primary store." in {
         // Test input
         val testPrin = mock[Principal]
         val expectedTx = mockTransaction
@@ -84,7 +84,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         instance.begin(testPrin) must be theSameInstanceAs (expectedTx)
       }
       
-      "delegate checkAuthentication invocations to the primary store" in {
+      "delegate checkAuthentication invocations to the primary store." in {
         // Expectations
         mockPrimaryStore expects 'checkAuthentication withArgs mockTransaction
         
@@ -92,7 +92,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         instance.checkAuthentication(mockTransaction)
       }
       
-      "delegate commit invocations to the primary store" in {
+      "delegate commit invocations to the primary store." in {
         // Expectations
         mockPrimaryStore expects 'commit withArgs mockTransaction
         
@@ -100,7 +100,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         instance.commit(mockTransaction)
       }
       
-      "delegate rollback invocations to the primary store" in {
+      "delegate rollback invocations to the primary store." in {
         // Expectations
         mockPrimaryStore expects 'rollback withArgs mockTransaction
         
@@ -108,7 +108,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         instance.rollback(mockTransaction)
       }
       
-      "have null childrenNames if both its stores have null childrenNames" in {
+      "have null childrenNames if both its stores have null childrenNames." in {
         val testUri = "/tmp"
         
         // Expectations
@@ -123,7 +123,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         instance.getChildrenNames(mockTransaction, testUri) must be (null)
       }
       
-      "include childrenNames from its primaryStore" in {
+      "include childrenNames from its primaryStore." in {
         val testUri = "/tmp"
         val testFile = "file"
         
@@ -143,7 +143,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
           mockTransaction, testUri).toList.sorted must equal (expectedNames)
       }
       
-      "include childrenNames from its rejectionStore" in {
+      "include childrenNames from its rejectionStore." in {
         val testUri = "/tmp"
         val testFile = "file"
         
@@ -161,7 +161,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
           mockTransaction, testUri).toList.sorted must equal (expectedNames)
       }
       
-      "include unique childrenNames from both its stores" in {
+      "include unique childrenNames from both its stores." in {
         val testUri = "/tmp"
         val testFile0 = "file0"
         val testFile1 = "file1"
@@ -182,13 +182,13 @@ class FilteredWebdavStoreSpecs extends WordSpec
       }
     }
     
-    "initialized with an always true inclusion predicate" must {
+    "initialized with an always-true inclusion predicate," must {
       val mockPrimaryStore = mock[IWebdavStore]
       val mockRejectionStore = mock[IWebdavStore]
       val instance = new FilteredWebdavStore(
           Predicates.alwaysTrue(), mockPrimaryStore, mockRejectionStore)
       
-      "delegate createFolder invocations to the primary store" in {
+      "delegate createFolder invocations to the primary store." in {
         val testUri = "/tmp"
         
         // Expectations
@@ -201,7 +201,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         instance.createFolder(mockTransaction, testUri)
       }
       
-      "delegate createResource invocations to the primary store" in {
+      "delegate createResource invocations to the primary store." in {
         val testUri = "/tmp/file"
         
         // Expectations
@@ -213,7 +213,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         instance.createResource(mockTransaction, testUri)
       }
       
-      "delegate getResourceContent invocations to the primary store" in {
+      "delegate getResourceContent invocations to the primary store." in {
         val testUri = "/tmp/file"
         val testInputStream = new ByteArrayInputStream(new Array[Byte](0))
         
@@ -232,7 +232,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         (actualInputStream) must equal (expectedInputStream)
       }
       
-      "delegate setResourceContent invocations to the primary store" in {
+      "delegate setResourceContent invocations to the primary store." in {
         val testUri = "/tmp/file"
         val testInputStream = new ByteArrayInputStream(new Array[Byte](0))
         val testContentType = "text/plain"
@@ -254,7 +254,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         ) must equal (expectedLength)
       }
       
-      "delegate getResourceLength invocations to the primary store" in {
+      "delegate getResourceLength invocations to the primary store." in {
         val testUri = "/tmp/file"
         val testLength = 42l
         
@@ -270,7 +270,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
           mockTransaction, testUri) must equal (expectedLength)
       }
       
-      "delegate removeObject invocations to the primary store" in {
+      "delegate removeObject invocations to the primary store." in {
         val testUri = "/tmp/file"
         
         // Expectations
@@ -282,7 +282,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         instance.removeObject(mockTransaction, testUri)
       }
       
-      "delegate getStoredObject invocations to the primary store" in {
+      "delegate getStoredObject invocations to the primary store." in {
         val testUri = "/tmp/file"
         val mockStoredObject = new StoredObject()
         
@@ -302,13 +302,13 @@ class FilteredWebdavStoreSpecs extends WordSpec
       }
     }
     
-    "initialized with an always false inclusion predicate" must {
+    "initialized with an always-false inclusion predicate," must {
       val mockPrimaryStore = mock[IWebdavStore]
       val mockRejectionStore = mock[IWebdavStore]
       val instance = new FilteredWebdavStore(
         Predicates.alwaysFalse(), mockPrimaryStore, mockRejectionStore)
       
-      "delegate createFolder invocations to the rejection store" in {
+      "delegate createFolder invocations to the rejection store." in {
         val testUri = "/tmp"
         
         // Expectations
@@ -320,7 +320,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         instance.createFolder(mockTransaction, testUri)
       }
       
-      "delegate createResource invocations to the rejection store" in {
+      "delegate createResource invocations to the rejection store." in {
         val testUri = "/tmp"
         
         // Expectations
@@ -332,7 +332,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         instance.createResource(mockTransaction, testUri)
       }
       
-      "delegate getResourceContent invocations to the rejection store" in {
+      "delegate getResourceContent invocations to the rejection store." in {
         val testUri = "/tmp/file"
         val mockInputStream = new ByteArrayInputStream(new Array[Byte](0))
         
@@ -351,7 +351,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         (actualInputStream) must equal (expectedInputStream)
       }
       
-      "delegate setResourceContent invocations to the rejection store" in {
+      "delegate setResourceContent invocations to the rejection store." in {
         val testUri = "/tmp/file"
         val testInputStream = new ByteArrayInputStream(new Array[Byte](0))
         val testContentType = "text/plain"
@@ -373,7 +373,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         ) must equal (expectedLength)
       }
       
-      "delegate getResourceLength invocations to the rejection store" in {
+      "delegate getResourceLength invocations to the rejection store." in {
         val testUri = "/tmp/file"
         val testLength = 42l
         
@@ -389,7 +389,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
           mockTransaction, testUri) must equal (expectedLength)
       }
       
-      "delegate removeObject invocations to the rejection store" in {
+      "delegate removeObject invocations to the rejection store." in {
         val testUri = "/tmp/file"
         
         // Expectations
@@ -401,7 +401,7 @@ class FilteredWebdavStoreSpecs extends WordSpec
         instance.removeObject(mockTransaction, testUri)
       }
       
-      "delegate getStoredObject invocations to the rejection store" in {
+      "delegate getStoredObject invocations to the rejection store." in {
         val testUri = "/tmp/file"
         val mockStoredObject = new StoredObject()
         
