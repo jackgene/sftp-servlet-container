@@ -200,13 +200,13 @@ public class HdfsStore implements IWebdavStore {
         }
         
         public void handleRollback() {
-            if (log.isInfoEnabled()) {
-                log.info(
+            if (log.isWarnEnabled()) {
+                log.warn(
+                    "Transaction rollbacks are not supported.\n" +
                     "The following operations were in this transaction:\n" +
                     Joiner.on('\n').join(operationHistory));
             }
             closeUnclosedInputStreams();
-            throw new UnsupportedOperationException("Rollback not supported.");
         }
         
         @Override
