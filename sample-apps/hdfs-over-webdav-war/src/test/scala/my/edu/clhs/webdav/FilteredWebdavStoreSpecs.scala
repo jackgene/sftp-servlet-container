@@ -21,15 +21,15 @@ import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.security.Principal
 import com.google.common.base.Predicates
+import net.sf.webdav.ITransaction
 import net.sf.webdav.IWebdavStore
+import net.sf.webdav.StoredObject
 import org.junit.runner.RunWith
 import org.scalamock.ProxyMockFactory
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.junit.MustMatchersForJUnit
 import org.scalatest.WordSpec
-import net.sf.webdav.ITransaction
-import net.sf.webdav.StoredObject
 
 /**
  * {@link FilteredWebdavStore} specifications.
