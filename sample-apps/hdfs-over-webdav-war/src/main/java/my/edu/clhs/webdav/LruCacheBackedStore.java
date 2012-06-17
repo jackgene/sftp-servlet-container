@@ -25,6 +25,9 @@ import net.sf.webdav.ITransaction;
 import net.sf.webdav.IWebdavStore;
 import net.sf.webdav.StoredObject;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.Weigher;
@@ -35,6 +38,9 @@ import com.google.common.cache.Weigher;
  * @author Jack Leow
  */
 public class LruCacheBackedStore implements IWebdavStore {
+    private static final Logger log =
+        LoggerFactory.getLogger(LruCacheBackedStore.class);
+    
     private static class ExtendedStoredObject extends StoredObject {
     }
     
@@ -78,22 +84,27 @@ public class LruCacheBackedStore implements IWebdavStore {
     
     @Override
     public ITransaction begin(Principal principal) {
-        throw new UnsupportedOperationException("pending");
+        log.trace("entering begin(...)");
+        // No op
+        return null;
     }
     
     @Override
     public void checkAuthentication(ITransaction transaction) {
-        throw new UnsupportedOperationException("pending");
+        log.trace("entering checkAuthentication(...)");
+        // No op
     }
     
     @Override
     public void commit(ITransaction transaction) {
-        throw new UnsupportedOperationException("pending");
+        log.trace("entering commit(...)");
+        // No op
     }
     
     @Override
     public void rollback(ITransaction transaction) {
-        throw new UnsupportedOperationException("pending");
+        log.trace("entering rollback(...)");
+        // No op
     }
     
     @Override
