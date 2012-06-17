@@ -21,6 +21,7 @@ import org.junit.runner.RunWith
 import org.scalatest.WordSpec
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.junit.MustMatchersForJUnit
+import net.sf.webdav.exceptions.ObjectAlreadyExistsException
 
 /**
  * {@link LruCacheBackedStore} specifications.
@@ -57,12 +58,39 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
   
   "A properly initialized LruCacheBackedStore" must {
     val instance = new LruCacheBackedStore(2L, 4L);
+    instance.createFolder(null, "/folder/");
+    instance.createResource(null, "/resource");
     
-    "allow a folder to be created." is (pending)
+    "allow a folder to be created." in {
+      // Input
+      val testUri = "/another-folder/"
+      
+      // Test
+      instance.createFolder(null, testUri)
+      
+      // Verify
+      instance.getStoredObject(null, testUri) must not be (null)
+    }
     
-    "prevent the creation of a duplicate folder." is (pending)
+    "prevent the creation of a duplicate folder." in {
+      // Input
+      val testUri = "/folder/"
+      
+      // Test & Verify
+      evaluating {
+        instance.createFolder(null, testUri)
+      } must produce[ObjectAlreadyExistsException]
+    }
     
-    "prevent the creation of a folder over an existing resource." is (pending)
+    "prevent the creation of a folder over an existing resource." in {
+      // Input
+      val testUri = "/resource"
+      
+      // Test & Verify
+      evaluating {
+        instance.createFolder(null, testUri)
+      } must produce[ObjectAlreadyExistsException]
+    }
     
     "prevent the creation of an orphaned folder." is (pending)
     
@@ -115,6 +143,10 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
     "allow resource attributes to be accessed." is (pending)
     
     "allow folder attributes to be accessed." is (pending)
+    
+    "allow resource attributes to be accessed by an equivalent URI." is (pending)
+    
+    "allow folder attributes to be accessed by an equivalent URI." is (pending)
     
     "return null when accessing missing resource/folder attributes." is (pending)
     
