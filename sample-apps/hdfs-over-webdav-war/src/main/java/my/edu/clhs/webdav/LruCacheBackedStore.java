@@ -17,13 +17,17 @@
  */
 package my.edu.clhs.webdav;
 
-import java.io.File;
 import java.io.InputStream;
+import java.net.URI;
 import java.security.Principal;
 
 import net.sf.webdav.ITransaction;
 import net.sf.webdav.IWebdavStore;
 import net.sf.webdav.StoredObject;
+
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.Weigher;
 
 /**
  * An LRU cache based {@link IWebdavStore}.
@@ -31,15 +35,45 @@ import net.sf.webdav.StoredObject;
  * @author Jack Leow
  */
 public class LruCacheBackedStore implements IWebdavStore {
-    public static final Long DEFAULT_MAX_RESOURCE_LENGTH = 64*1024l;
-    public static final Long DEFAULT_MAX_STORE_SPACE = 1024*1024l;
-    
-    public LruCacheBackedStore(Long maxResourceLength, Long maxStoreSpace) {
-        throw new UnsupportedOperationException("pending");
+    private static class ExtendedStoredObject extends StoredObject {
     }
     
-    public LruCacheBackedStore(File root) {
-        this(DEFAULT_MAX_RESOURCE_LENGTH, DEFAULT_MAX_STORE_SPACE);
+    private final long MAX_RESOURCE_LENGTH;
+    private final Cache<URI,ExtendedStoredObject> cache;
+    
+    public LruCacheBackedStore(Long maxResourceLength, Long maxStoreSpace) {
+        if (maxResourceLength == null) {
+            throw new NullPointerException(
+                "maxResourceLength must be non-null");
+        }
+        if (maxStoreSpace == null) {
+            throw new NullPointerException(
+                "maxStoreSpace must be non-null");
+        }
+        if (maxResourceLength < 0) {
+            throw new IllegalArgumentException(
+                "maxResourceLength must be non-negative");
+        }
+        if (maxStoreSpace < 0) {
+            throw new IllegalArgumentException(
+                "maxStoreSpace must be non-negative");
+        }
+        MAX_RESOURCE_LENGTH = maxResourceLength;
+        cache = CacheBuilder.newBuilder().
+            maximumWeight(maxStoreSpace).
+            weigher(
+                new Weigher<URI,ExtendedStoredObject>() {
+                    @Override
+                    public int weigh(
+                            URI uri, ExtendedStoredObject storedObject) {
+                        long length = storedObject.getResourceLength();
+                        
+                        return length < Integer.MAX_VALUE ?
+                            (int)length : Integer.MAX_VALUE;
+                    }
+                }
+            ).
+            build();
     }
     
     @Override
