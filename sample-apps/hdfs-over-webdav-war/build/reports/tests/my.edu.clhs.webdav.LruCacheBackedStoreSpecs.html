@@ -21,7 +21,7 @@
 <tr>
 <td>
 <div class="infoBox" id="tests">
-<div class="counter">36</div>
+<div class="counter">38</div>
 <p>tests</p>
 </div>
 </td><td>
@@ -31,7 +31,7 @@
 </div>
 </td><td>
 <div class="infoBox" id="duration">
-<div class="counter">0s</div>
+<div class="counter">0.050s</div>
 <p>duration</p>
 </div>
 </td>
@@ -62,118 +62,124 @@
 </tr>
 </thead>
 <tr>
-<td class="skipped">A LruCacheBackedStore must allow a folder to be created.<td>-</td><td class="skipped">ignored</td></td>
+<td class="success">A LruCacheBackedStore must complain when created with a negative maxResourceLength.<td>0.013s</td><td class="success">passed</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must allow a folder to be removed.<td>-</td><td class="skipped">ignored</td></td>
+<td class="success">A LruCacheBackedStore must complain when created with a negative maxStoreSpace.<td>0.002s</td><td class="success">passed</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must allow a resource to be created.<td>-</td><td class="skipped">ignored</td></td>
+<td class="success">A LruCacheBackedStore must complain when created without a maxResourceLength.<td>0.006s</td><td class="success">passed</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must allow a resource to be removed.<td>-</td><td class="skipped">ignored</td></td>
+<td class="success">A LruCacheBackedStore must complain when created without a maxStoreSpace.<td>0.010s</td><td class="success">passed</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must allow content to be written to a resource.<td>-</td><td class="skipped">ignored</td></td>
+<td class="success">A properly initialized LruCacheBackedStore must allow a folder to be created.<td>0.009s</td><td class="success">passed</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must allow folder attributes to be accessed.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must allow a folder to be removed.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must allow folder children names to be listed.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must allow a resource to be created.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must allow folder legnth to be accessed.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must allow a resource to be removed.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must allow resource attributes to be accessed.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must allow content to be written to a resource.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must allow resource contents to be read.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must allow folder attributes to be accessed by an equivalent URI.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must allow resource length to be accessed.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must allow folder attributes to be accessed.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must always have a root folder for attribute access.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must allow folder children names to be listed.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must always have a root folder for listing children.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must allow folder legnth to be accessed.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must complain when initialized with a negative maxResourceLength.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must allow resource attributes to be accessed by an equivalent URI.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must complain when initialized with a negative maxStoreSpace.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must allow resource attributes to be accessed.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must complain when initialized without a maxResourceLength.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must allow resource contents to be read.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must complain when initialized without a maxStoreSpace.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must allow resource length to be accessed.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must complain when reading the contents of a folder.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must always have a root folder for attribute access.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must complain when reading the contents of a missing resource.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must always have a root folder for listing children.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must evict the least recently used resource when full.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must complain when reading the contents of a folder.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must indicate that a missing resource/folder has zero length.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must complain when reading the contents of a missing resource.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must prevent the creation of a duplicate folder.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must evict the least recently used resource when full.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must prevent the creation of a duplicate resource.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must indicate that a missing resource/folder has zero length.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must prevent the creation of a folder over an existing resource.<td>-</td><td class="skipped">ignored</td></td>
+<td class="success">A properly initialized LruCacheBackedStore must prevent the creation of a duplicate folder.<td>0.002s</td><td class="success">passed</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must prevent the creation of a resource over an existing folder.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must prevent the creation of a duplicate resource.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must prevent the creation of an orphaned folder.<td>-</td><td class="skipped">ignored</td></td>
+<td class="success">A properly initialized LruCacheBackedStore must prevent the creation of a folder over an existing resource.<td>0.008s</td><td class="success">passed</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must prevent the creation of an orphaned resource.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must prevent the creation of a resource over an existing folder.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must prevent the removal of a folder with children.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must prevent the creation of an orphaned folder.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must prevent the removal of a missing resource/folder.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must prevent the creation of an orphaned resource.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must prevent the removal of the root folder.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must prevent the removal of a folder with children.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must prevent the writing of content that is too long.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must prevent the removal of a missing resource/folder.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must prevent the writing of content to a non-existent resource.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must prevent the removal of the root folder.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must return an empty array when listing the chilren of an empty folder.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must prevent the writing of content that is too long.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must return null when accessing missing resource/folder attributes.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must prevent the writing of content to a non-existent resource.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must return null when listing the chilren of a missing folder.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must return an empty array when listing the chilren of an empty folder.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 <tr>
-<td class="skipped">A LruCacheBackedStore must return null when listing the chilren of a resource.<td>-</td><td class="skipped">ignored</td></td>
+<td class="skipped">A properly initialized LruCacheBackedStore must return null when accessing missing resource/folder attributes.<td>-</td><td class="skipped">ignored</td></td>
+</tr>
+<tr>
+<td class="skipped">A properly initialized LruCacheBackedStore must return null when listing the chilren of a missing folder.<td>-</td><td class="skipped">ignored</td></td>
+</tr>
+<tr>
+<td class="skipped">A properly initialized LruCacheBackedStore must return null when listing the chilren of a resource.<td>-</td><td class="skipped">ignored</td></td>
 </tr>
 </table>
 </div>
 </div>
 <div id="footer">
-<p>Generated by <a href="http://www.gradle.org/">Gradle 1.0</a> at Jun 16, 2012 11:43:41 AM</p>
+<p>Generated by <a href="http://www.gradle.org/">Gradle 1.0</a> at Jun 17, 2012 8:56:25 AM</p>
 </div>
 </div>
 </body>

@@ -17,13 +17,16 @@
  */
 package my.edu.clhs.webdav;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.security.Principal;
 
 import net.sf.webdav.ITransaction;
 import net.sf.webdav.IWebdavStore;
 import net.sf.webdav.StoredObject;
+import net.sf.webdav.exceptions.ObjectAlreadyExistsException;
+import net.sf.webdav.exceptions.WebdavException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,9 +48,10 @@ public class LruCacheBackedStore implements IWebdavStore {
     }
     
     private final long MAX_RESOURCE_LENGTH;
-    private final Cache<URI,ExtendedStoredObject> cache;
+    private final Cache<File,ExtendedStoredObject> cache;
     
     public LruCacheBackedStore(Long maxResourceLength, Long maxStoreSpace) {
+        log.trace("new(" + maxResourceLength + ", " + maxStoreSpace + ")");
         if (maxResourceLength == null) {
             throw new NullPointerException(
                 "maxResourceLength must be non-null");
@@ -68,10 +72,10 @@ public class LruCacheBackedStore implements IWebdavStore {
         cache = CacheBuilder.newBuilder().
             maximumWeight(maxStoreSpace).
             weigher(
-                new Weigher<URI,ExtendedStoredObject>() {
+                new Weigher<File,ExtendedStoredObject>() {
                     @Override
                     public int weigh(
-                            URI uri, ExtendedStoredObject storedObject) {
+                            File file, ExtendedStoredObject storedObject) {
                         long length = storedObject.getResourceLength();
                         
                         return length < Integer.MAX_VALUE ?
@@ -84,37 +88,55 @@ public class LruCacheBackedStore implements IWebdavStore {
     
     @Override
     public ITransaction begin(Principal principal) {
-        log.trace("entering begin(...)");
+        log.trace("begin(...)");
         // No op
         return null;
     }
     
     @Override
     public void checkAuthentication(ITransaction transaction) {
-        log.trace("entering checkAuthentication(...)");
+        log.trace("checkAuthentication(...)");
         // No op
     }
     
     @Override
     public void commit(ITransaction transaction) {
-        log.trace("entering commit(...)");
+        log.trace("commit(...)");
         // No op
     }
     
     @Override
     public void rollback(ITransaction transaction) {
-        log.trace("entering rollback(...)");
+        log.trace("rollback(...)");
         // No op
+    }
+    
+    private File toCanonicalFile(String uri) {
+        try {
+            return new File(uri).getCanonicalFile();
+        } catch (IOException e) {
+            throw new WebdavException("bad URI");
+        }
     }
     
     @Override
     public void createFolder(ITransaction transaction, String folderUri) {
-        throw new UnsupportedOperationException("pending");
+        if (getStoredObject(transaction, folderUri) != null) {
+            throw new ObjectAlreadyExistsException(folderUri);
+        }
+        ExtendedStoredObject folder = new ExtendedStoredObject();
+        folder.setFolder(true);
+        cache.put(toCanonicalFile(folderUri), folder);
     }
     
     @Override
     public void createResource(ITransaction transaction, String resourceUri) {
-        throw new UnsupportedOperationException("pending");
+        if (getStoredObject(transaction, resourceUri) != null) {
+            throw new ObjectAlreadyExistsException(resourceUri);
+        }
+        ExtendedStoredObject resource = new ExtendedStoredObject();
+        resource.setFolder(false);
+        cache.put(toCanonicalFile(resourceUri), resource);
     }
     
     @Override
@@ -147,6 +169,6 @@ public class LruCacheBackedStore implements IWebdavStore {
     
     @Override
     public StoredObject getStoredObject(ITransaction transaction, String uri) {
-        throw new UnsupportedOperationException("pending");
+        return cache.getIfPresent(toCanonicalFile(uri));
     }
 }
