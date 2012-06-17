@@ -30,13 +30,33 @@ import org.scalatest.junit.MustMatchersForJUnit
 @RunWith(classOf[JUnitRunner])
 class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
   "A LruCacheBackedStore" must {
-    "complain when initialized without a maxResourceLength." is (pending)
+    "complain when created without a maxResourceLength." in {
+      evaluating {
+        new LruCacheBackedStore(null, 0L)
+      } must produce[NullPointerException]
+    }
     
-    "complain when initialized without a maxStoreSpace." is (pending)
+    "complain when created without a maxStoreSpace." in {
+      evaluating {
+        new LruCacheBackedStore(0L, null)
+      } must produce[NullPointerException]
+    }
     
-    "complain when initialized with a negative maxResourceLength." is (pending)
+    "complain when created with a negative maxResourceLength." in {
+      evaluating {
+        new LruCacheBackedStore(-1L, 0L)
+      } must produce[IllegalArgumentException]
+    }
     
-    "complain when initialized with a negative maxStoreSpace." is (pending)
+    "complain when created with a negative maxStoreSpace." in {
+      evaluating {
+        new LruCacheBackedStore(0L, -1L)
+      } must produce[IllegalArgumentException]
+    }
+  }
+  
+  "A properly initialized LruCacheBackedStore" must {
+    val instance = new LruCacheBackedStore(2L, 4L);
     
     "allow a folder to be created." is (pending)
     
