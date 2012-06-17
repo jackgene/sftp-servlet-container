@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package my.edu.clhs.hadoop.webdav;
+package my.edu.clhs.webdav.hadoop;
 
 import java.io.File;
 import java.io.IOException;
