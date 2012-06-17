@@ -114,7 +114,7 @@ public class HdfsStore implements IWebdavStore {
                             try {
                                 evt.getValue().close();
                             } catch (IOException e) {
-                                log.warn("Failed to close Filssystem", e);
+                                log.warn("Failed to close Filesystem", e);
                             }
                         }
                     }
@@ -203,7 +203,7 @@ public class HdfsStore implements IWebdavStore {
             if (log.isWarnEnabled()) {
                 log.warn(
                     "Transaction rollbacks are not supported.\n" +
-                    "The following operations were in this transaction:\n" +
+                    "The following operations will NOT be rolled back:\n" +
                     Joiner.on('\n').join(operationHistory));
             }
             closeUnclosedInputStreams();
@@ -223,7 +223,7 @@ public class HdfsStore implements IWebdavStore {
     @Override
     public ITransaction begin(Principal principal) {
         ITransaction transaction = new HdfsTransaction(principal);
-        log.debug("begin(" + principal + "): " + transaction);
+        log.trace("begin(" + principal + "): " + transaction);
         if (principal != null) {
             log.debug("Authenticating using principal: " + principal.getName());
         } else {
@@ -234,12 +234,12 @@ public class HdfsStore implements IWebdavStore {
     
     @Override
     public void checkAuthentication(ITransaction transaction) {
-        log.debug("checkAuthentication(" + transaction + ")");
+        log.trace("checkAuthentication(" + transaction + ")");
         // Do nothing.
     }
     
     public void checkWriteAccess(ITransaction transaction) {
-        log.debug("checkWriteAccess(" + transaction + ")");
+        log.trace("checkWriteAccess(" + transaction + ")");
         if (transaction.getPrincipal() == null) {
             throw new AccessDeniedException("Must be authenticated to write.");
         }
@@ -247,7 +247,7 @@ public class HdfsStore implements IWebdavStore {
     
     @Override
     public void commit(ITransaction transaction) {
-        log.debug("commit(" + transaction + ")");
+        log.trace("commit(" + transaction + ")");
         HdfsTransaction hdfsTx = (HdfsTransaction)transaction;
         
         hdfsTx.handleCommit();
@@ -255,7 +255,7 @@ public class HdfsStore implements IWebdavStore {
     
     @Override
     public void rollback(ITransaction transaction) {
-        log.debug("rollback(" + transaction + ")");
+        log.trace("rollback(" + transaction + ")");
         log.warn("Transaction is being rolled back.");
         HdfsTransaction hdfsTx = (HdfsTransaction)transaction;
         
@@ -264,7 +264,7 @@ public class HdfsStore implements IWebdavStore {
     
     @Override
     public void createFolder(ITransaction transaction, String folderUri) {
-        log.debug("createFolder(" + transaction + "," + folderUri + ")");
+        log.trace("createFolder(" + transaction + "," + folderUri + ")");
         checkWriteAccess(transaction);
         Path path = resolvePath(folderUri);
         HdfsTransaction hdfsTx = (HdfsTransaction)transaction;
@@ -282,7 +282,7 @@ public class HdfsStore implements IWebdavStore {
     
     @Override
     public void createResource(ITransaction transaction, String resourceUri) {
-        log.debug("createResource(" + transaction + "," + resourceUri + ")");
+        log.trace("createResource(" + transaction + "," + resourceUri + ")");
         checkWriteAccess(transaction);
         Path path = resolvePath(resourceUri);
         HdfsTransaction hdfsTx = (HdfsTransaction)transaction;
@@ -300,7 +300,7 @@ public class HdfsStore implements IWebdavStore {
     
     public InputStream getResourceContent(
             ITransaction transaction, String uri) {
-        log.debug("getResourceContent(" + transaction + "," + uri + ")");
+        log.trace("getResourceContent(" + transaction + "," + uri + ")");
         Path path = resolvePath(uri);
         HdfsTransaction hdfsTx = (HdfsTransaction)transaction;
         FileSystem hdfs = hdfsTx.getFileSystem();
@@ -321,7 +321,7 @@ public class HdfsStore implements IWebdavStore {
     public long setResourceContent(
             ITransaction transaction, String resourceUri,
             InputStream content, String contentType, String characterEncoding) {
-        log.debug("setResourceContent(" +
+        log.trace("setResourceContent(" +
             transaction + "," + resourceUri + ",...)");
         long numBytesWritten = 0;
         Path path = resolvePath(resourceUri);
@@ -372,7 +372,7 @@ public class HdfsStore implements IWebdavStore {
     @Override
     public String[] getChildrenNames(
             ITransaction transaction, String folderUri) {
-        log.debug("getChildrenNames(" + transaction + "," + folderUri + ")");
+        log.trace("getChildrenNames(" + transaction + "," + folderUri + ")");
         try {
             FileSystem fs = ((HdfsTransaction)transaction).getFileSystem();
             List<FileStatus> fileStatuses =
@@ -393,7 +393,7 @@ public class HdfsStore implements IWebdavStore {
     
     @Override
     public long getResourceLength(ITransaction transaction, String uri) {
-        log.debug("getResourceLength(" + transaction + "," + uri + ")");
+        log.trace("getResourceLength(" + transaction + "," + uri + ")");
         Path path = resolvePath(uri);
         FileSystem hdfs = ((HdfsTransaction)transaction).getFileSystem();
         
@@ -408,7 +408,7 @@ public class HdfsStore implements IWebdavStore {
     
     @Override
     public void removeObject(ITransaction transaction, String uri) {
-        log.debug("removeObject(" + transaction + "," + uri + ")");
+        log.trace("removeObject(" + transaction + "," + uri + ")");
         checkWriteAccess(transaction);
         Path path = resolvePath(uri);
         HdfsTransaction hdfsTx = (HdfsTransaction)transaction;
@@ -426,7 +426,7 @@ public class HdfsStore implements IWebdavStore {
     
     @Override
     public StoredObject getStoredObject(ITransaction transaction, String uri) {
-        log.debug("getStoredObject(" + transaction + "," + uri + ")");
+        log.trace("getStoredObject(" + transaction + "," + uri + ")");
         StoredObject so = null;
         Path path = resolvePath(uri);
         FileSystem hdfs = ((HdfsTransaction)transaction).getFileSystem();
