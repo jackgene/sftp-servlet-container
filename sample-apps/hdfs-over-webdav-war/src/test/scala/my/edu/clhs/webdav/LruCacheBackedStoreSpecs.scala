@@ -22,6 +22,7 @@ import org.scalatest.WordSpec
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.junit.MustMatchersForJUnit
 import net.sf.webdav.exceptions.ObjectAlreadyExistsException
+import net.sf.webdav.exceptions.ObjectNotFoundException
 
 /**
  * {@link LruCacheBackedStore} specifications.
@@ -92,7 +93,15 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       } must produce[ObjectAlreadyExistsException]
     }
     
-    "prevent the creation of an orphaned folder." is (pending)
+    "prevent the creation of an orphaned folder." in {
+      // Input
+      val testUri = "/missing/folder/"
+      
+      // Test & Verify
+      evaluating {
+        instance.createFolder(null, testUri)
+      } must produce[ObjectNotFoundException]
+    }
     
     "allow a resource to be created." is (pending)
     
