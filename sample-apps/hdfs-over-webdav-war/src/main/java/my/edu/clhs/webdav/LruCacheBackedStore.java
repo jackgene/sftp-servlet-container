@@ -131,17 +131,17 @@ public class LruCacheBackedStore implements IWebdavStore {
     }
     
     private ExtendedStoredObject load(File path) {
-        try {
-            return cache.getIfPresent(path.getCanonicalFile());
-        } catch (IOException e) {
-            throw new WebdavException("bad URI");
-        }
+        return cache.getIfPresent(path);
+    }
+    
+    private void store(File path, ExtendedStoredObject object) {
+        cache.put(path, object);
     }
     
     @Override
     public void createFolder(ITransaction transaction, String folderUri) {
         log.trace("createFolder(...," + folderUri + ")");
-        File path = new File(folderUri);
+        File path = toCanonicalFile(folderUri);
         if (load(path) != null) {
             throw new ObjectAlreadyExistsException(folderUri);
         }
@@ -153,17 +153,25 @@ public class LruCacheBackedStore implements IWebdavStore {
         }
         ExtendedStoredObject folder = new ExtendedStoredObject();
         folder.setFolder(true);
-        cache.put(toCanonicalFile(folderUri), folder);
+        store(path, folder);
     }
     
     @Override
     public void createResource(ITransaction transaction, String resourceUri) {
-        if (getStoredObject(transaction, resourceUri) != null) {
+        log.trace("createResource(...," + resourceUri + ")");
+        File path = toCanonicalFile(resourceUri);
+        if (load(path) != null) {
             throw new ObjectAlreadyExistsException(resourceUri);
+        }
+        File parent = path.getParentFile();
+        if (load(parent) == null) {
+            throw new ObjectNotFoundException(
+                parent.getPath() + " while attempting to create resource " +
+                resourceUri);
         }
         ExtendedStoredObject resource = new ExtendedStoredObject();
         resource.setFolder(false);
-        cache.put(toCanonicalFile(resourceUri), resource);
+        store(path, resource);
     }
     
     @Override

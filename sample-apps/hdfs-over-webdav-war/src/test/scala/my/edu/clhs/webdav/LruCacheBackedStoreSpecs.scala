@@ -103,13 +103,46 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       } must produce[ObjectNotFoundException]
     }
     
-    "allow a resource to be created." is (pending)
+    "allow a resource to be created." in {
+      // Input
+      val testUri = "/another-resource"
+      
+      // Test
+      instance.createResource(null, testUri)
+      
+      // Verify
+      instance.getStoredObject(null, testUri) must not be (null)
+    }
     
-    "prevent the creation of a duplicate resource." is (pending)
+    "prevent the creation of a duplicate resource." in {
+      // Input
+      val testUri = "/resource"
+      
+      // Test & Verify
+      evaluating {
+        instance.createResource(null, testUri)
+      } must produce[ObjectAlreadyExistsException]
+    }
     
-    "prevent the creation of a resource over an existing folder." is (pending)
+    "prevent the creation of a resource over an existing folder." in {
+      // Input
+      val testUri = "/folder"
+      
+      // Test & Verify
+      evaluating {
+        instance.createResource(null, testUri)
+      } must produce[ObjectAlreadyExistsException]
+    }
     
-    "prevent the creation of an orphaned resource." is (pending)
+    "prevent the creation of an orphaned resource." in {
+      // Input
+      val testUri = "/missing/resource"
+      
+      // Test & Verify
+      evaluating {
+        instance.createResource(null, testUri)
+      } must produce[ObjectNotFoundException]
+    }
     
     "allow resource contents to be read." is (pending)
     
