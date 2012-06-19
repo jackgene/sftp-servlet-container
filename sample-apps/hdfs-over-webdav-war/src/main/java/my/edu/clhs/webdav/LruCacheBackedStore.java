@@ -21,11 +21,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.Principal;
+import java.util.Date;
 
 import net.sf.webdav.ITransaction;
 import net.sf.webdav.IWebdavStore;
 import net.sf.webdav.StoredObject;
 import net.sf.webdav.exceptions.ObjectAlreadyExistsException;
+import net.sf.webdav.exceptions.ObjectNotFoundException;
 import net.sf.webdav.exceptions.WebdavException;
 
 import org.slf4j.Logger;
@@ -69,6 +71,14 @@ public class LruCacheBackedStore implements IWebdavStore {
                 "maxStoreSpace must be non-negative");
         }
         MAX_RESOURCE_LENGTH = maxResourceLength;
+        
+        Date now = new Date();
+        
+        ExtendedStoredObject root = new ExtendedStoredObject();
+        root.setFolder(true);
+        root.setCreationDate(now);
+        root.setLastModified(now);
+        
         cache = CacheBuilder.newBuilder().
             maximumWeight(maxStoreSpace).
             weigher(
@@ -84,6 +94,7 @@ public class LruCacheBackedStore implements IWebdavStore {
                 }
             ).
             build();
+        cache.put(new File("/"), root);
     }
     
     @Override
@@ -119,10 +130,26 @@ public class LruCacheBackedStore implements IWebdavStore {
         }
     }
     
+    private ExtendedStoredObject load(File path) {
+        try {
+            return cache.getIfPresent(path.getCanonicalFile());
+        } catch (IOException e) {
+            throw new WebdavException("bad URI");
+        }
+    }
+    
     @Override
     public void createFolder(ITransaction transaction, String folderUri) {
-        if (getStoredObject(transaction, folderUri) != null) {
+        log.trace("createFolder(...," + folderUri + ")");
+        File path = new File(folderUri);
+        if (load(path) != null) {
             throw new ObjectAlreadyExistsException(folderUri);
+        }
+        File parent = path.getParentFile();
+        if (load(parent) == null) {
+            throw new ObjectNotFoundException(
+                parent.getPath() + " while attempting to create folder " +
+                folderUri);
         }
         ExtendedStoredObject folder = new ExtendedStoredObject();
         folder.setFolder(true);
