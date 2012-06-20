@@ -17,6 +17,7 @@
  */
 package my.edu.clhs.webdav;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,6 +48,30 @@ public class LruCacheBackedStore implements IWebdavStore {
         LoggerFactory.getLogger(LruCacheBackedStore.class);
     
     private static class ExtendedStoredObject extends StoredObject {
+        public ExtendedStoredObject(boolean folder) {
+            super.setFolder(folder);
+            
+            Date now = new Date();
+            super.setCreationDate(now);
+            super.setLastModified(now);
+            if (folder) {
+                contentBytes = null;
+            } else {
+                contentBytes = new byte[0];
+            }
+        }
+        
+        final byte[] contentBytes;
+        
+        public InputStream getContent() {
+            return new ByteArrayInputStream(contentBytes);
+        }
+        
+        @Override
+        public void setFolder(boolean f) {
+            throw new UnsupportedOperationException(
+                "ExtendedStoredObject.folder is immutable");
+        }
     }
     
     private final long MAX_RESOURCE_LENGTH;
@@ -72,12 +97,7 @@ public class LruCacheBackedStore implements IWebdavStore {
         }
         MAX_RESOURCE_LENGTH = maxResourceLength;
         
-        Date now = new Date();
-        
-        ExtendedStoredObject root = new ExtendedStoredObject();
-        root.setFolder(true);
-        root.setCreationDate(now);
-        root.setLastModified(now);
+        ExtendedStoredObject root = new ExtendedStoredObject(true);
         
         cache = CacheBuilder.newBuilder().
             maximumWeight(maxStoreSpace).
@@ -151,8 +171,7 @@ public class LruCacheBackedStore implements IWebdavStore {
                 parent.getPath() + " while attempting to create folder " +
                 folderUri);
         }
-        ExtendedStoredObject folder = new ExtendedStoredObject();
-        folder.setFolder(true);
+        ExtendedStoredObject folder = new ExtendedStoredObject(true);
         store(path, folder);
     }
     
@@ -169,15 +188,23 @@ public class LruCacheBackedStore implements IWebdavStore {
                 parent.getPath() + " while attempting to create resource " +
                 resourceUri);
         }
-        ExtendedStoredObject resource = new ExtendedStoredObject();
-        resource.setFolder(false);
+        ExtendedStoredObject resource = new ExtendedStoredObject(false);
         store(path, resource);
     }
     
     @Override
     public InputStream getResourceContent(
             ITransaction transaction, String resourceUri) {
-        throw new UnsupportedOperationException("pending");
+        File path = toCanonicalFile(resourceUri);
+        ExtendedStoredObject resource = load(path);
+        if (resource == null) {
+            throw new ObjectNotFoundException(resourceUri);
+        }
+        if (resource.isFolder()) {
+            throw new WebdavException(resourceUri);
+        }
+        
+        return resource.getContent();
     }
     
     @Override
