@@ -23,6 +23,7 @@ import org.scalatest.junit.JUnitRunner
 import org.scalatest.junit.MustMatchersForJUnit
 import net.sf.webdav.exceptions.ObjectAlreadyExistsException
 import net.sf.webdav.exceptions.ObjectNotFoundException
+import net.sf.webdav.exceptions.WebdavException
 
 /**
  * {@link LruCacheBackedStore} specifications.
@@ -144,11 +145,36 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       } must produce[ObjectNotFoundException]
     }
     
-    "allow resource contents to be read." is (pending)
+    "allow resource contents to be read." in {
+      // Input
+      val testUri = "/resource"
+      
+      // Test
+      val actualContent = instance.getResourceContent(null, testUri);
+      
+      // Verify
+      actualContent.read() must equal (-1) // Empty content
+    }
     
-    "complain when reading the contents of a folder." is (pending)
+    "complain when reading the contents of a folder." in {
+      // Input
+      val testUri = "/folder"
+      
+      // Test & Verify
+      evaluating {
+        instance.getResourceContent(null, testUri)
+      } must produce[WebdavException]
+    }
     
-    "complain when reading the contents of a missing resource." is (pending)
+    "complain when reading the contents of a missing resource." in {
+      // Input
+      val testUri = "/missing"
+      
+      // Test & Verify
+      evaluating {
+        instance.getResourceContent(null, testUri)
+      } must produce[ObjectNotFoundException]
+    }
     
     "allow content to be written to a resource." is (pending)
     
