@@ -213,6 +213,10 @@ public class LruCacheBackedStore implements IWebdavStore {
         cache.put(path, object);
     }
     
+    private ExtendedStoredObject remove(File path) {
+        return cache.asMap().remove(path);
+    }
+    
     @Override
     public void createFolder(ITransaction transaction, String folderUri) {
         log.trace("createFolder(...," + folderUri + ")");
@@ -341,7 +345,19 @@ public class LruCacheBackedStore implements IWebdavStore {
     
     @Override
     public void removeObject(ITransaction transaction, String uri) {
-        throw new UnsupportedOperationException("pending");
+        final File path = toCanonicalFile(uri);
+        if (path.getParentFile() == null) {
+            throw new AccessDeniedException("root folder cannot be removed");
+        }
+        final ExtendedStoredObject object = load(path);
+        if (object == null) {
+            throw new ObjectNotFoundException(uri);
+        }
+        if (object.isFolder() && object.getChildrenNames().length > 0) {
+            throw new AccessDeniedException(
+                uri + " has children and cannot be removed");
+        }
+        remove(path);
     }
     
     @Override

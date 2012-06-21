@@ -64,15 +64,20 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
     val instance = new LruCacheBackedStore(8L, 16L);
     instance.createFolder(null, "/folder/");
     instance.createResource(null, "/resource");
+    instance.setResourceContent(
+      null, "/resource",
+      new ByteArrayInputStream(Array[Byte](1, 2, 3)),
+      null, null)
     
     return instance
   }
   "A properly initialized LruCacheBackedStore" must {
-    val instance = testInstance
-    
     "allow a folder to be created." in {
       // Input
       val testUri = "/another-folder/"
+      
+      // Set up
+      val instance = testInstance
       
       // Test
       instance.createFolder(null, testUri)
@@ -85,6 +90,9 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       // Input
       val testUri = "/folder/"
       
+      // Set up
+      val instance = testInstance
+      
       // Test & Verify
       evaluating {
         instance.createFolder(null, testUri)
@@ -94,6 +102,9 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
     "prevent the creation of a folder over an existing resource." in {
       // Input
       val testUri = "/resource"
+      
+      // Set up
+      val instance = testInstance
       
       // Test & Verify
       evaluating {
@@ -105,6 +116,9 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       // Input
       val testUri = "/missing/folder/"
       
+      // Set up
+      val instance = testInstance
+      
       // Test & Verify
       evaluating {
         instance.createFolder(null, testUri)
@@ -114,6 +128,9 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
     "allow a resource to be created." in {
       // Input
       val testUri = "/another-resource"
+      
+      // Set up
+      val instance = testInstance
       
       // Test
       instance.createResource(null, testUri)
@@ -126,6 +143,9 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       // Input
       val testUri = "/resource"
       
+      // Set up
+      val instance = testInstance
+      
       // Test & Verify
       evaluating {
         instance.createResource(null, testUri)
@@ -135,6 +155,9 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
     "prevent the creation of a resource over an existing folder." in {
       // Input
       val testUri = "/folder"
+      
+      // Set up
+      val instance = testInstance
       
       // Test & Verify
       evaluating {
@@ -146,6 +169,9 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       // Input
       val testUri = "/missing/resource"
       
+      // Set up
+      val instance = testInstance
+      
       // Test & Verify
       evaluating {
         instance.createResource(null, testUri)
@@ -156,17 +182,25 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       // Input
       val testUri = "/resource"
       
+      // Set up
+      val instance = testInstance
+      
       // Test
       val actualContentStream = instance.getResourceContent(null, testUri)
       
       // Verify
-      actualContentStream.read() must equal (-1) // Empty content
+      List[Byte](1, 2, 3, -1) foreach { expectedValue =>
+        actualContentStream.read() must equal (expectedValue)
+      }
       actualContentStream.close()
     }
     
     "complain when reading the contents of a folder." in {
       // Input
       val testUri = "/folder/"
+      
+      // Set up
+      val instance = testInstance
       
       // Test & Verify
       evaluating {
@@ -178,6 +212,9 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       // Input
       val testUri = "/missing"
       
+      // Set up
+      val instance = testInstance
+      
       // Test & Verify
       evaluating {
         instance.getResourceContent(null, testUri)
@@ -188,6 +225,9 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       // Input
       val testUri = "/resource"
       val testContent = Array[Byte](1, 2, 3, 5, 7, 11, 13, 17)
+      
+      // Set up
+      val instance = testInstance
       
       // Test
       val actualLength = instance.setResourceContent(
@@ -208,6 +248,9 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       val testUri = "/folder"
       val testContent = Array[Byte](1, 2, 3, 5, 7, 11, 13, 17)
       
+      // Set up
+      val instance = testInstance
+      
       // Test & Verify
       evaluating {
         instance.setResourceContent(
@@ -219,6 +262,9 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       // Input
       val testUri = "/missing"
       val testContent = Array[Byte](1, 2, 3, 5, 7, 11, 13, 17)
+      
+      // Set up
+      val instance = testInstance
       
       // Test & Verify
       evaluating {
@@ -232,6 +278,9 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       val testUri = "/resource"
       val testContent = Array[Byte](1, 2, 3, 5, 7, 11, 13, 17, 19)
       
+      // Set up
+      val instance = testInstance
+      
       // Test & Verify
       evaluating {
         instance.setResourceContent(
@@ -244,6 +293,7 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       val testUri = "/folder/"
       
       // Set up
+      val instance = testInstance
       instance.createResource(null, "/folder/folder/")
       instance.createResource(null, "/folder/resource")
       
@@ -268,6 +318,9 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       // Input
       val testUri = "/resource"
       
+      // Set up
+      val instance = testInstance
+      
       // Test & Verify
       instance.getChildrenNames(null, testUri) must be (null)
     }
@@ -275,6 +328,9 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
     "return null when listing the chilren of a missing folder." in {
       // Input
       val testUri = "/missing/"
+      
+      // Set up
+      val instance = testInstance
       
       // Test & Verify
       instance.getChildrenNames(null, testUri) must be (null)
@@ -295,19 +351,20 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
     "allow resource length to be accessed." in {
       // Input
       val testUri = "/resource"
-      val testContent = Array[Byte](1, 2, 3, 5, 7, 11, 13, 17)
       
       // Set up
-      instance.setResourceContent(
-        null, testUri, new ByteArrayInputStream(testContent), null, null)
+      val instance = testInstance
       
       // Test & Verify
-      instance.getResourceLength(null, testUri) must equal (8)
+      instance.getResourceLength(null, testUri) must equal (3)
     }
     
     "allow folder length to be accessed." in {
       // Input
       val testUri = "/folder"
+      
+      // Set up
+      val instance = testInstance
       
       // Test & Verify
       instance.getResourceLength(null, testUri) must equal (0)
@@ -318,32 +375,204 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       // Input
       val testUri = "/missing"
       
+      // Set up
+      val instance = testInstance
+      
       // Test & Verify
       instance.getResourceLength(null, testUri) must equal (0)
     }
     
-    "allow a resource to be removed." is (pending)
+    "allow a resource to be removed." in {
+      // Input
+      val testUri = "/resource"
+      
+      // Set up
+      val instance = testInstance
+      
+      // Test
+      instance.removeObject(null, testUri)
+      
+      // Verify
+      instance.getStoredObject(null, testUri) must be (null)
+    }
     
-    "allow a folder to be removed." is (pending)
+    "allow a folder to be removed." in {
+      // Input
+      val testUri = "/folder/"
+      
+      // Set up
+      val instance = testInstance
+      
+      // Test
+      instance.removeObject(null, testUri)
+      
+      // Verify
+      instance.getStoredObject(null, testUri) must be (null)
+    }
     
-    "prevent the removal of the root folder." is (pending)
+    "prevent the removal of the root folder." in {
+      // Input
+      val testUri = "/"
+      
+      // Set up
+      val instance = testInstance
+      
+      // Test & Verify
+      evaluating {
+        instance.removeObject(null, testUri)
+      } must produce[AccessDeniedException]
+    }
     
-    "prevent the removal of a folder with children." is (pending)
+    "prevent the removal of a folder with children." in {
+      // Input
+      val testUri = "/folder"
+      
+       // Set up
+      val instance = testInstance
+      instance.createResource(null, "/folder/resource")
+      
+     // Test & Verify
+      evaluating {
+        instance.removeObject(null, testUri)
+      } must produce[AccessDeniedException]
+    }
     
-    "prevent the removal of a missing resource/folder." is (pending)
+    "prevent the removal of a missing resource/folder." in {
+      // Input
+      val testUri = "/missing"
+      
+      // Set up
+      val instance = testInstance
+      
+      // Test & Verify
+      evaluating {
+        instance.removeObject(null, testUri)
+      } must produce[ObjectNotFoundException]
+    }
     
-    "allow resource attributes to be accessed." is (pending)
+    "allow resource attributes to be accessed." in {
+      // Input
+      val testUri = "/resource"
+      
+       // Set up
+      val instance = testInstance
+      
+      // Test
+      val actualObject = instance.getStoredObject(null, testUri)
+      
+      // Verify
+      actualObject must not be (null)
+      actualObject.isFolder must be (false)
+      actualObject.getResourceLength must equal (3)
+      actualObject.getCreationDate must not be (null)
+      actualObject.getLastModified must not be (null)
+    }
     
-    "allow folder attributes to be accessed." is (pending)
+    "allow folder attributes to be accessed." in {
+      // Input
+      val testUri = "/folder/"
+      
+       // Set up
+      val instance = testInstance
+      
+      // Test
+      val actualObject = instance.getStoredObject(null, testUri)
+      
+      // Verify
+      actualObject must not be (null)
+      actualObject.isFolder must be (true)
+      actualObject.getResourceLength must equal (0)
+      actualObject.getCreationDate must not be (null)
+      actualObject.getLastModified must not be (null)
+    }
     
-    "allow resource attributes to be accessed by an equivalent URI." is (pending)
+    "allow resource attributes to be accessed by an equivalent URI." in {
+      // Input
+      val testUri = "/./folder/../resource"
+      
+       // Set up
+      val instance = testInstance
+      
+      // Test
+      val actualObject = instance.getStoredObject(null, testUri)
+      
+      // Verify
+      actualObject must not be (null)
+      actualObject.isFolder must be (false)
+      actualObject.getResourceLength must equal (3)
+      actualObject.getCreationDate must not be (null)
+      actualObject.getLastModified must not be (null)
+    }
     
-    "allow folder attributes to be accessed by an equivalent URI." is (pending)
+    "allow folder attributes to be accessed by an equivalent URI." in {
+      // Input
+      val testUri = "/./folder/../folder/"
+      
+       // Set up
+      val instance = testInstance
+      
+      // Test
+      val actualObject = instance.getStoredObject(null, testUri)
+      
+      // Verify
+      actualObject must not be (null)
+      actualObject.isFolder must be (true)
+      actualObject.getResourceLength must equal (0)
+      actualObject.getCreationDate must not be (null)
+      actualObject.getLastModified must not be (null)
+    }
     
-    "return null when accessing missing resource/folder attributes." is (pending)
+    "return null when accessing missing resource/folder attributes." in {
+      // Input
+      val testUri = "/missing"
+      
+       // Set up
+      val instance = testInstance
+      
+      // Test
+      val actualObject = instance.getStoredObject(null, testUri)
+      
+      // Verify
+      actualObject must be (null)
+    }
     
-    "always have a root folder for attribute access." is (pending)
+    "always have a root folder for attribute access." in {
+      // Input
+      val testUri = "/"
+      
+       // Set up
+      val instance = testInstance
+      
+      // Test
+      val actualObject = instance.getStoredObject(null, testUri)
+      
+      // Verify
+      actualObject must not be (null)
+      actualObject.isFolder must be (true)
+      actualObject.getResourceLength must equal (0)
+      actualObject.getCreationDate must not be (null)
+      actualObject.getLastModified must not be (null)
+    }
     
-    "evict the least recently used resource when full." is (pending)
+    "evict the least recently used resource when full." in {
+      // Input
+      val testContent = Array[Byte](1, 2, 3, 5, 7, 11, 13, 17)
+      
+      // Set up
+      val instance = testInstance
+      
+      // Test
+      instance.createResource(null, "/resource1")
+      instance.setResourceContent(
+        null, "/resource1", new ByteArrayInputStream(testContent), null, null)
+      instance.createResource(null, "/resource2")
+      instance.setResourceContent(
+        null, "/resource2", new ByteArrayInputStream(testContent), null, null)
+      
+      // Verify
+      instance.getStoredObject(null, "/resource") must be (null)
+      instance.getStoredObject(null, "/resource1") must not be (null)
+      instance.getStoredObject(null, "/resource2") must not be (null)
+    }
   }
 }
