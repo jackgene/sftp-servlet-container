@@ -17,16 +17,22 @@
  */
 package my.edu.clhs.webdav;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.Principal;
+import java.util.Collections;
 import java.util.Date;
+import java.util.Set;
+import java.util.TreeSet;
 
 import net.sf.webdav.ITransaction;
 import net.sf.webdav.IWebdavStore;
 import net.sf.webdav.StoredObject;
+import net.sf.webdav.exceptions.AccessDeniedException;
 import net.sf.webdav.exceptions.ObjectAlreadyExistsException;
 import net.sf.webdav.exceptions.ObjectNotFoundException;
 import net.sf.webdav.exceptions.WebdavException;
@@ -56,21 +62,70 @@ public class LruCacheBackedStore implements IWebdavStore {
             super.setLastModified(now);
             if (folder) {
                 contentBytes = null;
+                childrenNames = Collections.emptySet();
             } else {
                 contentBytes = new byte[0];
+                childrenNames = null;
             }
         }
         
-        final byte[] contentBytes;
+        public ExtendedStoredObject(
+                boolean folder, Date creationDate, Date lastModified,
+                byte[] contentBytes, Set<String> childrenNames) {
+            super.setFolder(folder);
+            super.setCreationDate(creationDate);
+            super.setLastModified(lastModified);
+            this.contentBytes = contentBytes;
+            if (contentBytes != null) {
+                setResourceLength(contentBytes.length);
+            }
+            this.childrenNames = childrenNames != null ?
+                Collections.unmodifiableSet(childrenNames) : null;
+        }
+        
+        private final byte[] contentBytes;
         
         public InputStream getContent() {
             return new ByteArrayInputStream(contentBytes);
         }
         
+        private final Set<String> childrenNames;
+        
+        public String[] getChildrenNames() {
+            return childrenNames != null ?
+                childrenNames.toArray(new String[childrenNames.size()]) :
+                null;
+        }
+        
+        public ExtendedStoredObject addChildName(String childName) {
+            Set<String> childrenNames =
+                new TreeSet<String>(this.childrenNames);
+            childrenNames.add(childName);
+            
+            return new ExtendedStoredObject(
+                isFolder(),
+                getCreationDate(),
+                getLastModified(),
+                contentBytes,
+                childrenNames);
+        }
+        
         @Override
-        public void setFolder(boolean f) {
+        public void setFolder(boolean folder) {
             throw new UnsupportedOperationException(
                 "ExtendedStoredObject.folder is immutable");
+        }
+        
+        @Override
+        public void setCreationDate(Date date) {
+            throw new UnsupportedOperationException(
+                "ExtendedStoredObject.creationDate is immutable");
+        }
+        
+        @Override
+        public void setLastModified(Date date) {
+            throw new UnsupportedOperationException(
+                "ExtendedStoredObject.lastModified is immutable");
         }
     }
     
@@ -165,14 +220,20 @@ public class LruCacheBackedStore implements IWebdavStore {
         if (load(path) != null) {
             throw new ObjectAlreadyExistsException(folderUri);
         }
-        File parent = path.getParentFile();
-        if (load(parent) == null) {
+        File parentPath = path.getParentFile();
+        ExtendedStoredObject parent = load(parentPath);
+        if (parent == null) {
             throw new ObjectNotFoundException(
-                parent.getPath() + " while attempting to create folder " +
+                parentPath.getPath() + ": while attempting to create folder " +
                 folderUri);
+        } else if (!parent.isFolder()) {
+            throw new WebdavException(
+                parentPath.getPath() + " must be a folder: " +
+                "while attempting to create folder " + folderUri);
         }
         ExtendedStoredObject folder = new ExtendedStoredObject(true);
         store(path, folder);
+        store(parentPath, parent.addChildName(path.getName()));
     }
     
     @Override
@@ -182,14 +243,20 @@ public class LruCacheBackedStore implements IWebdavStore {
         if (load(path) != null) {
             throw new ObjectAlreadyExistsException(resourceUri);
         }
-        File parent = path.getParentFile();
-        if (load(parent) == null) {
+        File parentPath = path.getParentFile();
+        ExtendedStoredObject parent = load(parentPath);
+        if (parent == null) {
             throw new ObjectNotFoundException(
-                parent.getPath() + " while attempting to create resource " +
+                parentPath.getPath() + ": while attempting to create folder " +
                 resourceUri);
+        } else if (!parent.isFolder()) {
+            throw new WebdavException(
+                parentPath.getPath() + " must be a folder: " +
+                "while attempting to create folder " + resourceUri);
         }
         ExtendedStoredObject resource = new ExtendedStoredObject(false);
         store(path, resource);
+        store(parentPath, parent.addChildName(path.getName()));
     }
     
     @Override
@@ -211,17 +278,65 @@ public class LruCacheBackedStore implements IWebdavStore {
     public long setResourceContent(ITransaction transaction,
             String resourceUri, InputStream content, String contentType,
             String characterEncoding) {
-        throw new UnsupportedOperationException("pending");
+        long len = 0;
+        File path = toCanonicalFile(resourceUri);
+        ExtendedStoredObject resource = load(path);
+        if (resource == null) {
+            throw new ObjectNotFoundException(resourceUri);
+        }
+        if (resource.isFolder()) {
+            throw new WebdavException(resourceUri);
+        }
+        byte[] buf = new byte[64*1024];
+        InputStream buffered = new BufferedInputStream(content);
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        try {
+            int read = buffered.read(buf);
+            while (read != -1) {
+                len += read;
+                if (len > MAX_RESOURCE_LENGTH) {
+                    throw new AccessDeniedException(resourceUri +
+                        " - resource length must be under " +
+                        MAX_RESOURCE_LENGTH);
+                }
+                os.write(buf, 0, read);
+                read = buffered.read(buf);
+            }
+            byte[] contentBytes = os.toByteArray();
+            store(path,
+                new ExtendedStoredObject(
+                    resource.isFolder(),
+                    resource.getCreationDate(),
+                    new Date(),
+                    contentBytes, null)
+            );
+        } catch (IOException e) {
+            throw new WebdavException(e);
+        } finally {
+            try {
+                buffered.close();
+            } catch (IOException e) {
+                // Ignore
+            }
+        }
+        
+        return len;
     }
     
     @Override
     public String[] getChildrenNames(ITransaction transaction, String folderUri) {
-        throw new UnsupportedOperationException("pending");
+        final File path = toCanonicalFile(folderUri);
+        final ExtendedStoredObject folder = load(path);
+        
+        return folder != null ? folder.getChildrenNames() : null;
     }
     
     @Override
     public long getResourceLength(ITransaction transaction, String resourceUri) {
-        throw new UnsupportedOperationException("pending");
+        final File path = toCanonicalFile(resourceUri);
+        final ExtendedStoredObject resource = load(path);
+        
+        return resource != null ? resource.getResourceLength() : 0;
     }
     
     @Override

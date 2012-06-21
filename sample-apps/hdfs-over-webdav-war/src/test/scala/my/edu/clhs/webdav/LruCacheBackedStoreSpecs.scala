@@ -17,10 +17,12 @@
  */
 package my.edu.clhs.webdav
 
+import java.io.ByteArrayInputStream
 import org.junit.runner.RunWith
 import org.scalatest.WordSpec
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.junit.MustMatchersForJUnit
+import net.sf.webdav.exceptions.AccessDeniedException
 import net.sf.webdav.exceptions.ObjectAlreadyExistsException
 import net.sf.webdav.exceptions.ObjectNotFoundException
 import net.sf.webdav.exceptions.WebdavException
@@ -58,10 +60,15 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
     }
   }
   
-  "A properly initialized LruCacheBackedStore" must {
-    val instance = new LruCacheBackedStore(2L, 4L);
+  def testInstance: LruCacheBackedStore = {
+    val instance = new LruCacheBackedStore(8L, 16L);
     instance.createFolder(null, "/folder/");
     instance.createResource(null, "/resource");
+    
+    return instance
+  }
+  "A properly initialized LruCacheBackedStore" must {
+    val instance = testInstance
     
     "allow a folder to be created." in {
       // Input
@@ -150,15 +157,16 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       val testUri = "/resource"
       
       // Test
-      val actualContent = instance.getResourceContent(null, testUri);
+      val actualContentStream = instance.getResourceContent(null, testUri)
       
       // Verify
-      actualContent.read() must equal (-1) // Empty content
+      actualContentStream.read() must equal (-1) // Empty content
+      actualContentStream.close()
     }
     
     "complain when reading the contents of a folder." in {
       // Input
-      val testUri = "/folder"
+      val testUri = "/folder/"
       
       // Test & Verify
       evaluating {
@@ -176,27 +184,143 @@ class LruCacheBackedStoreSpecs extends WordSpec with MustMatchersForJUnit {
       } must produce[ObjectNotFoundException]
     }
     
-    "allow content to be written to a resource." is (pending)
+    "allow content to be written to a resource." in {
+      // Input
+      val testUri = "/resource"
+      val testContent = Array[Byte](1, 2, 3, 5, 7, 11, 13, 17)
+      
+      // Test
+      val actualLength = instance.setResourceContent(
+        null, testUri, new ByteArrayInputStream(testContent), null, null)
+      
+      // Verify
+      actualLength must equal (8)
+      val actualContentStream = instance.getResourceContent(null, testUri)
+      testContent.toList.foreach { expectedValue =>
+        actualContentStream.read() must equal (expectedValue)
+      }
+      actualContentStream.read() must equal (-1) // no extra data
+      actualContentStream.close()
+    }
     
-    "prevent the writing of content to a non-existent resource." is (pending)
+    "prevent the writing of content to a folder." in {
+      // Input
+      val testUri = "/folder"
+      val testContent = Array[Byte](1, 2, 3, 5, 7, 11, 13, 17)
+      
+      // Test & Verify
+      evaluating {
+        instance.setResourceContent(
+          null, testUri, new ByteArrayInputStream(testContent), null, null)
+      } must produce[WebdavException]
+    }
     
-    "prevent the writing of content that is too long." is (pending)
+    "prevent the writing of content to a non-existent resource." in {
+      // Input
+      val testUri = "/missing"
+      val testContent = Array[Byte](1, 2, 3, 5, 7, 11, 13, 17)
+      
+      // Test & Verify
+      evaluating {
+        instance.setResourceContent(
+          null, testUri, new ByteArrayInputStream(testContent), null, null)
+      } must produce[ObjectNotFoundException]
+    }
     
-    "allow folder children names to be listed." is (pending)
+    "prevent the writing of content that is too long." in {
+      // Input
+      val testUri = "/resource"
+      val testContent = Array[Byte](1, 2, 3, 5, 7, 11, 13, 17, 19)
+      
+      // Test & Verify
+      evaluating {
+        instance.setResourceContent(
+          null, testUri, new ByteArrayInputStream(testContent), null, null)
+      } must produce[AccessDeniedException]
+    }
     
-    "return an empty array when listing the chilren of an empty folder." is (pending)
+    "allow folder children names to be listed." in {
+      // Input
+      val testUri = "/folder/"
+      
+      // Set up
+      instance.createResource(null, "/folder/folder/")
+      instance.createResource(null, "/folder/resource")
+      
+      // Test & Verify
+      val expectedNames = Array[String]("folder", "resource")
+      instance.getChildrenNames(null, testUri) must equal (expectedNames)
+    }
     
-    "return null when listing the chilren of a resource." is (pending)
+    "return an empty array when listing the chilren of an empty folder." in {
+      // Input
+      val testUri = "/folder/"
+      
+      // Set up
+      val instance = testInstance
+      
+      // Test & Verify
+      val expectedNames = Array[String]()
+      instance.getChildrenNames(null, testUri) must equal (expectedNames)
+    }
     
-    "return null when listing the chilren of a missing folder." is (pending)
+    "return null when listing the chilren of a resource." in {
+      // Input
+      val testUri = "/resource"
+      
+      // Test & Verify
+      instance.getChildrenNames(null, testUri) must be (null)
+    }
     
-    "always have a root folder for listing children." is (pending)
+    "return null when listing the chilren of a missing folder." in {
+      // Input
+      val testUri = "/missing/"
+      
+      // Test & Verify
+      instance.getChildrenNames(null, testUri) must be (null)
+    }
     
-    "allow resource length to be accessed." is (pending)
+    "always have a root folder for listing children." in {
+      // Input
+      val testUri = "/"
+      
+      // Set up
+      val instance = testInstance
+      
+      // Test & Verify
+      val expectedNames = Array[String]("folder", "resource")
+      instance.getChildrenNames(null, testUri) must equal (expectedNames)
+    }
     
-    "allow folder legnth to be accessed." is (pending)
+    "allow resource length to be accessed." in {
+      // Input
+      val testUri = "/resource"
+      val testContent = Array[Byte](1, 2, 3, 5, 7, 11, 13, 17)
+      
+      // Set up
+      instance.setResourceContent(
+        null, testUri, new ByteArrayInputStream(testContent), null, null)
+      
+      // Test & Verify
+      instance.getResourceLength(null, testUri) must equal (8)
+    }
     
-    "indicate that a missing resource/folder has zero length." is (pending)
+    "allow folder length to be accessed." in {
+      // Input
+      val testUri = "/folder"
+      
+      // Test & Verify
+      instance.getResourceLength(null, testUri) must equal (0)
+    }
+    
+    // This doesn't make sense but mimmick's LocalFileSystemStore behavior
+    "indicate that a missing resource/folder has zero length." in {
+      // Input
+      val testUri = "/missing"
+      
+      // Test & Verify
+      instance.getResourceLength(null, testUri) must equal (0)
+    }
     
     "allow a resource to be removed." is (pending)
     
