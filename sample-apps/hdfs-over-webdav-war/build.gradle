@@ -11,6 +11,9 @@ war {
 
 repositories {
     mavenCentral()
+    maven {
+        url 'https://repository.cloudera.com/artifactory/cloudera-repos/'
+    }
 }
 
 configurations {
@@ -42,10 +45,12 @@ dependencies {
         'org.slf4j:slf4j-log4j12:' + SLF4J_VERSION,
     )
     compile(
-        'org.apache.hadoop:hadoop-core:0.20.203.0'
+        'org.apache.hadoop:hadoop-core:0.20.2-cdh3u4'
     ) {
+        exclude group: 'javax.servlet.jsp'
         exclude group: 'org.mortbay.jetty'
         exclude group: 'tomcat'
+        exclude group: 'com.cloudera.cdh'
     }
     compile files('libs/webdav-servlet-2.0.1.jar')
     

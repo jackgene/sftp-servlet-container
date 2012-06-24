@@ -25,7 +25,6 @@ import java.util.Set;
 
 import net.sf.webdav.ITransaction;
 import net.sf.webdav.IWebdavStore;
-import net.sf.webdav.LocalFileSystemStore;
 import net.sf.webdav.StoredObject;
 import net.sf.webdav.exceptions.AccessDeniedException;
 
@@ -118,15 +117,7 @@ public class FilteredWebdavStore implements IWebdavStore {
     }
     
     private static IWebdavStore defaultRejectionStore() {
-        File storeDir = new File(
-            System.getProperty("java.io.tmpdir"),
-            "FilteredWebdavStoreRejects");
-        
-        if (!storeDir.exists()) {
-            storeDir.mkdirs();
-        }
-        
-        return new LocalFileSystemStore(storeDir);
+        return new LruCacheBackedStore(128*1024L, 16*1024*1024L);
     }
     
     public FilteredWebdavStore(IWebdavStore primaryStore) {
