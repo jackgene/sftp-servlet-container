@@ -142,11 +142,13 @@ public class SftpProtocol implements ProtocolHandler {
          * 
          * @param path request path.
          * @param method request method.
+         * @param headers request headers.
          * @param inputBuffer PUT/POST contents.
          * @param outputBuffer response contents.
          * @return response objects (containing header information).
          */
-        private Response service(String method,
+        private Response service(
+                String method, Map<String,String> headers,
                 InputBuffer inputBuffer, OutputBuffer outputBuffer) {
             Request request = new Request();
             request.setInputBuffer(inputBuffer);
@@ -163,6 +165,12 @@ public class SftpProtocol implements ProtocolHandler {
             request.requestURI().setString(absolutePath);
             if (userName != null) {
                 request.getRemoteUser().setString(userName);
+            }
+            MimeHeaders reqHeaders = request.getMimeHeaders();
+            for (Map.Entry<String,String> header : headers.entrySet()) {
+                reqHeaders.
+                    setValue(header.getKey()).
+                    setString(header.getValue());
             }
             request.setResponse(response);
             response.setRequest(request);
@@ -181,6 +189,21 @@ public class SftpProtocol implements ProtocolHandler {
             return response;
         }
         
+        /**
+         * Submit a request to be serviced by Coyote.
+         * 
+         * @param path request path.
+         * @param method request method.
+         * @param inputBuffer PUT/POST contents.
+         * @param outputBuffer response contents.
+         * @return response objects (containing header information).
+         */
+        private Response service(String method,
+                InputBuffer inputBuffer, OutputBuffer outputBuffer) {
+            return service(
+                method, Collections.<String,String>emptyMap(),
+                inputBuffer, outputBuffer);
+        }
         // TODO revisit/rewrite
         private Response processWebDav() {
             InputBuffer propFindBuf = new InputBuffer() {
@@ -207,7 +230,10 @@ public class SftpProtocol implements ProtocolHandler {
                     return chunk.getLength();
                 }
             };
-            Response response = service("PROPFIND", propFindBuf, webDavBuf);
+            Map<String,String> propFindHeaders = new HashMap<String,String>();
+            propFindHeaders.put("Depth", "1");
+            Response response = service(
+                "PROPFIND", propFindHeaders, propFindBuf, webDavBuf);
             // TODO hack since it's hard to get Spring to return 207
             int status = response.getStatus();
             if (status >= SC_OK && status <= 207) { // TODO consider throwing exception otherwise
