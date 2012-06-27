@@ -76,7 +76,10 @@ import org.apache.tomcat.util.http.MimeHeaders;
  * @author Jack Leow
  */
 public class SftpProtocol implements ProtocolHandler {
+    public static final int SC_MULTI_STATUS = 207;
+    
     private static final Log log = LogFactory.getLog(SftpProtocol.class);
+    
     private SshServer endpoint = SshServer.setUpDefaultServer();
     
     private HashMap<String,Object> attributes = new HashMap<String,Object>();
@@ -236,7 +239,7 @@ public class SftpProtocol implements ProtocolHandler {
                 "PROPFIND", propFindHeaders, propFindBuf, webDavBuf);
             // TODO hack since it's hard to get Spring to return 207
             int status = response.getStatus();
-            if (status >= SC_OK && status <= 207) { // TODO consider throwing exception otherwise
+            if (status >= SC_OK && status <= SC_MULTI_STATUS) { // TODO consider throwing exception otherwise
                 SAXParserFactory factory = SAXParserFactory.newInstance();
                 factory.setNamespaceAware(true);
                 factory.setValidating(true);
@@ -290,7 +293,7 @@ public class SftpProtocol implements ProtocolHandler {
                 // TODO WTF was going on here?
             }
             int status = response != null ? response.getStatus() : -1;
-            if (status >= SC_OK && status <= 207) {
+            if (status >= SC_OK && status <= SC_MULTI_STATUS) {
                 // TODO is this right? is it OK to return 207?
                 httpStatus = status;
                 httpHeaders = response.getMimeHeaders();
@@ -411,7 +414,7 @@ public class SftpProtocol implements ProtocolHandler {
         public long getSize() {
             long size = 0;
             
-            if (httpStatus == SC_OK) {
+            if (httpStatus == SC_OK || httpStatus == SC_MULTI_STATUS) {
                 size = contentLength;
             } else if (README_FILENAME.equals(getName())) {
                 size = README_FILE_SIZE;
@@ -500,7 +503,7 @@ public class SftpProtocol implements ProtocolHandler {
         public InputStream createInputStream(long offset) throws IOException {
             InputStream is;
             
-            if (httpStatus == SC_OK) {
+            if (httpStatus == SC_OK || httpStatus == SC_MULTI_STATUS) {
                 is = new PipedInputStream();
                 final OutputStream pos =
                     new PipedOutputStream((PipedInputStream)is);
@@ -529,6 +532,7 @@ public class SftpProtocol implements ProtocolHandler {
                     }
                 }).start();
             } else if (README_FILENAME.equals(getName())) {
+                // TODO make sure this is getting closed.
                 is = README_FILE_URL.openStream();
             } else {
                 is = null;
