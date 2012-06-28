@@ -21,6 +21,7 @@ import static javax.servlet.http.HttpServletResponse.SC_NOT_FOUND;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -165,7 +166,7 @@ public class SftpProtocol implements ProtocolHandler {
             request.serverName().setString(endpoint.getHost());
             request.protocol().setString("SFTP");
             request.method().setString(method);
-            request.requestURI().setString(absolutePath);
+            request.requestURI().setString(getAbsolutePath());
             if (userName != null) {
                 request.getRemoteUser().setString(userName);
             }
@@ -184,7 +185,7 @@ public class SftpProtocol implements ProtocolHandler {
             } catch (Exception e) {
                 throw new RuntimeException(
                     "An error occurred when " +
-                    userName + " requested " + absolutePath,
+                    userName + " requested " + path,
                     e);
             }
             
@@ -255,7 +256,7 @@ public class SftpProtocol implements ProtocolHandler {
                             parsedFilesProps.iterator(); iter.hasNext();) {
                         Map<String,String> fileProps = iter.next();
                         
-                        if (absolutePath.equals(fileProps.get("path"))) {
+                        if (path.equals(new File(fileProps.get("path")))) {
                             iter.remove();
                             String len = fileProps.get("contentLength");
                             if (len != null) {
@@ -278,12 +279,15 @@ public class SftpProtocol implements ProtocolHandler {
         public SftpServletFile(String path, String userName) {
             this.userName = userName;
             if (path == null || path.equals(".")) {
-                absolutePath = "/";
+                this.path = new File("/");
             } else {
-                absolutePath =
-                    (path.startsWith("/") ? "" : "/") +
-                    path +
-                    (path.endsWith(".") ? "/" : "");
+                try {
+                    this.path =
+                        new File(new File("/"), path).getCanonicalFile();
+                } catch (IOException e) {
+                    // This should never happen
+                    throw new RuntimeException(e);
+                }
             }
             
             Response response = null;
@@ -298,7 +302,7 @@ public class SftpProtocol implements ProtocolHandler {
                 httpStatus = status;
                 httpHeaders = response.getMimeHeaders();
             } else {
-                if (!absolutePath.endsWith("/")) {
+                if (!path.endsWith("/")) {
                     OutputBuffer outputBuffer = new OutputBuffer() {
                         public int doWrite(ByteChunk chunk, Response response)
                                 throws IOException {
@@ -319,18 +323,16 @@ public class SftpProtocol implements ProtocolHandler {
             }
         }
         
-        private final String absolutePath;
+        private final File path;
         
         // @Override
         public String getAbsolutePath() {
-            return absolutePath;
+            return path.getAbsolutePath();
         }
         
         // @Override
         public String getName() {
-            int lastSlashIdx = absolutePath.lastIndexOf('/');
-            return lastSlashIdx >= 0 ?
-                absolutePath.substring(lastSlashIdx + 1) : absolutePath;
+            return path.getName();
         }
         
         // @Override
@@ -550,7 +552,7 @@ public class SftpProtocol implements ProtocolHandler {
         
         @Override
         public String toString() {
-            return absolutePath;
+            return path.toString();
         }
     }
     
