@@ -381,8 +381,7 @@ public class SftpProtocol implements ProtocolHandler {
         }
         
         public boolean isExecutable() {
-            // TODO does this have to be true for directories?
-            return false;
+            return isDirectory();
         }
         
         // @Override
