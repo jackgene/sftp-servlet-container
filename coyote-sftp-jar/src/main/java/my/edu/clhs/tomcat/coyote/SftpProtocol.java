@@ -367,9 +367,9 @@ public class SftpProtocol implements ProtocolHandler {
                 }
                 sshFiles = Collections.unmodifiableList(sshFiles);
             } else {
-                // TODO use absolute paths when creating files.
                 sshFiles = Collections.singletonList(
-                    (SshFile)new SftpServletFile(README_FILENAME, userName));
+                    (SshFile)new SftpServletFile(
+                        getAbsolutePath() + "/" + README_FILENAME, userName));
             }
             
             return sshFiles;
