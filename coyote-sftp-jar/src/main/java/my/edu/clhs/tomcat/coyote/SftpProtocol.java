@@ -76,6 +76,7 @@ import org.apache.tomcat.util.http.MimeHeaders;
  * 
  * @author Jack Leow
  */
+// TODO where do we canonicalize the "path"? getAbsolutePath()? before service()?
 public class SftpProtocol implements ProtocolHandler {
     public static final int SC_MULTI_STATUS = 207;
     
@@ -281,13 +282,7 @@ public class SftpProtocol implements ProtocolHandler {
             if (path == null || path.equals(".")) {
                 this.path = new File("/");
             } else {
-                try {
-                    this.path =
-                        new File(new File("/"), path).getCanonicalFile();
-                } catch (IOException e) {
-                    // This should never happen
-                    throw new RuntimeException(e);
-                }
+                this.path = new File(new File("/"), path);
             }
             
             Response response = null;
@@ -327,7 +322,12 @@ public class SftpProtocol implements ProtocolHandler {
         
         // @Override
         public String getAbsolutePath() {
-            return path.getAbsolutePath();
+            try {
+                return path.getCanonicalPath();
+            } catch (IOException e) {
+                // TODO ensure that this never gets called (by calling in constructor and assigning to variable)
+                throw new RuntimeException("bad path");
+            }
         }
         
         // @Override
@@ -357,22 +357,25 @@ public class SftpProtocol implements ProtocolHandler {
         
         // @Override
         public List<SshFile> listSshFiles() {
-            List<SshFile> sshFiles;
+            List<SshFile> sshFiles = new ArrayList<SshFile>();
+            String absolutePath = getAbsolutePath();
             
+            sshFiles.add(
+                new SftpServletFile(absolutePath + "/.", userName));
+            sshFiles.add(
+                new SftpServletFile(absolutePath + "/..", userName));
             if (sshFilesProps != null) {
-                sshFiles = new ArrayList<SshFile>();
                 for (Map<String,String> fileProps : sshFilesProps) {
                     sshFiles.add(
                         new SftpServletFile(fileProps.get("path"), userName));
                 }
-                sshFiles = Collections.unmodifiableList(sshFiles);
             } else {
-                sshFiles = Collections.singletonList(
-                    (SshFile)new SftpServletFile(
-                        getAbsolutePath() + "/" + README_FILENAME, userName));
+                sshFiles.add(
+                    new SftpServletFile(
+                        absolutePath + "/" + README_FILENAME, userName));
             }
             
-            return sshFiles;
+            return Collections.unmodifiableList(sshFiles);
         }
         
         // @Override
