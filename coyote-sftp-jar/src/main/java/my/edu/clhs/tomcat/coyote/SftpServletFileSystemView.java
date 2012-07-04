@@ -177,17 +177,31 @@ class SftpServletFileSystemView implements FileSystemView {
         throw new UnsupportedOperationException();
     }
     
-    // TODO add . and ..
     public List<SshFile> getDirectoryContents(String absolutePath) {
         List<SshFile> directoryContents = new ArrayList<SshFile>();
         
+        // First, add "." and ".." directories.
+        directoryContents.add(
+            new SftpServletSshFile.Builder(this).
+                path(absolutePath + "/.").
+                isDirectory(true).
+                build()
+        );
+        directoryContents.add(
+            new SftpServletSshFile.Builder(this).
+                path(absolutePath + "/..").
+                isDirectory(true).
+                build()
+        );
         try {
+            // TODO try and make "." and ".." display the correct metadata (date)
             directoryContents.addAll(
                 xmlToFiles(
                     propFindResponseXmlBody(absolutePath, 1),
                     absolutePath)
             );
         } catch (SftpServletException e) { // TODO more specific exception? (e.g., DavNotSupportedException)
+            // TODO add README.txt
         }
         
         return directoryContents;
