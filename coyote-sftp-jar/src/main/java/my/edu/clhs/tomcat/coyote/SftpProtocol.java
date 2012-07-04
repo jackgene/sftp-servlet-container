@@ -17,16 +17,22 @@
  */
 package my.edu.clhs.tomcat.coyote;
 
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.security.PublicKey;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 import org.apache.coyote.Adapter;
+import org.apache.coyote.InputBuffer;
+import org.apache.coyote.OutputBuffer;
 import org.apache.coyote.ProtocolHandler;
+import org.apache.coyote.Request;
+import org.apache.coyote.RequestInfo;
+import org.apache.coyote.Response;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 import org.apache.sshd.SshServer;
@@ -39,18 +45,17 @@ import org.apache.sshd.server.FileSystemView;
 import org.apache.sshd.server.ForwardingFilter;
 import org.apache.sshd.server.PasswordAuthenticator;
 import org.apache.sshd.server.PublickeyAuthenticator;
-import org.apache.sshd.server.SshFile;
 import org.apache.sshd.server.keyprovider.PEMGeneratorHostKeyProvider;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.sftp.SftpSubsystem;
+import org.apache.tomcat.util.http.MimeHeaders;
 
 /**
  * {@link ProtocolHandler} for the SSH File Transfer Protocol.
  * 
  * @author Jack Leow
  */
-// TODO where do we canonicalize the "path"? getAbsolutePath()? before service()?
 public class SftpProtocol implements ProtocolHandler {
     private static final Log log = LogFactory.getLog(SftpProtocol.class);
     
@@ -88,6 +93,60 @@ public class SftpProtocol implements ProtocolHandler {
     
     public String getHost() { return endpoint.getHost(); }
     public void setHost(String host) { endpoint.setHost(host); }
+    
+    /**
+     * Submit a request to be serviced by Coyote.
+     * 
+     * @param path request path.
+     * @param method request method.
+     * @param userName request user name.
+     * @param headers request headers.
+     * @param inputBuffer PUT/POST contents.
+     * @param outputBuffer response contents.
+     * @return response objects (containing header information).
+     */
+    Response service(
+            URI path, String method, String userName,
+            Map<String,String> headers,
+            InputBuffer inputBuffer, OutputBuffer outputBuffer) {
+        Request request = new Request();
+        request.setInputBuffer(inputBuffer);
+        
+        Response response = new Response();
+        response.setOutputBuffer(outputBuffer);
+        
+        RequestInfo rp = request.getRequestProcessor();
+        rp.setStage(org.apache.coyote.Constants.STAGE_PREPARE);
+        request.scheme().setString("sftp");
+        request.serverName().setString(endpoint.getHost());
+        request.protocol().setString("SFTP");
+        request.method().setString(method);
+        request.requestURI().setString(path.normalize().toString());
+        if (userName != null) {
+            request.getRemoteUser().setString(userName);
+        }
+        MimeHeaders reqHeaders = request.getMimeHeaders();
+        for (Map.Entry<String,String> header : headers.entrySet()) {
+            reqHeaders.
+                setValue(header.getKey()).
+                setString(header.getValue());
+        }
+        request.setResponse(response);
+        response.setRequest(request);
+        
+        rp.setStage(org.apache.coyote.Constants.STAGE_SERVICE);
+        try {
+            adapter.service(request, response);
+        } catch (Exception e) {
+            throw new RuntimeException(
+                "An error occurred when " +
+                userName + " requested " + path,
+                e);
+        }
+        
+        rp.setStage(org.apache.coyote.Constants.STAGE_ENDED);
+        return response;
+    }
     
     // @Override - ProtocolHandler
     public void init() throws Exception {
@@ -136,31 +195,9 @@ public class SftpProtocol implements ProtocolHandler {
             }
         });
         endpoint.setFileSystemFactory(new FileSystemFactory() {
-            class SftpServletFileSystemView implements FileSystemView {
-                private final String userName;
-                
-                SftpServletFileSystemView(String userName) {
-                    this.userName = userName;
-                }
-                
-                // @Override
-                public SshFile getFile(String file) {
-                    return new SftpServletFile(
-                        SftpProtocol.this, file, userName);
-                }
-                
-                // @Override
-                public SshFile getFile(SshFile baseDir, String file) {
-                    return new SftpServletFile(
-                        SftpProtocol.this,
-                        baseDir.getAbsolutePath() + "/" + file,
-                        userName);
-                }
-            }
-            
             public FileSystemView createFileSystemView(Session session)
                     throws IOException {
-                return new SftpServletFileSystemView(session.getUsername());
+                return new SftpServletFileSystemView(SftpProtocol.this, session.getUsername());
             }
         });
         endpoint.setSubsystemFactories(

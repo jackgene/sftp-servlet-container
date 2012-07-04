@@ -17,28 +17,46 @@
  */
 package my.edu.clhs.tomcat.coyote;
 
+import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 /**
- * TODO quick implementation for JPR demo. Revisit and rewrite.
+ * SAX handler that parses DAV:multistatus XML content into
+ * {@link SftpServletSshFile}s.
+ * 
+ * TODO could this be an inner class or a more generic SftpServletFileSystemView?
  * 
  * @author Jack Leow
  */
 class WebDavSaxHandler extends DefaultHandler {
     private static final String NAMESPACE_URI = "DAV:";
     
-    private List<Map<String,String>> files;
-    private Map<String,String> file;
+    private final SftpServletFileSystemView fileSystemView;
+    private final String pathToDiscard;
     
-    public List<Map<String,String>> getFiles() {
-        return files;
+    public WebDavSaxHandler(
+            SftpServletFileSystemView fileSystemView, String pathToDiscard) {
+        this.fileSystemView = fileSystemView;
+        this.pathToDiscard = pathToDiscard;
+    }
+    
+    private List<SftpServletSshFile> files;
+    private SftpServletSshFile.Builder fileBuilder;
+    private StringBuilder charBuffer;
+    
+    private boolean shouldDiscard(String path) {
+        return pathToDiscard != null &&
+            new File(pathToDiscard).equals(new File(path));
+    }
+    
+    public List<SftpServletSshFile> getFiles() {
+        return Collections.unmodifiableList(files);
     }
     
     private enum State {
@@ -49,7 +67,7 @@ class WebDavSaxHandler extends DefaultHandler {
                     String qName, Attributes attributes) {
                 if (NAMESPACE_URI.equals(uri) &&
                         "multistatus".equals(localName)) {
-                    context.files = new ArrayList<Map<String,String>>();
+                    context.files = new ArrayList<SftpServletSshFile>();
                     return MULTISTATUS;
                 }
                 return super.startElement(
@@ -63,7 +81,8 @@ class WebDavSaxHandler extends DefaultHandler {
                     String qName, Attributes attributes) {
                 if (NAMESPACE_URI.equals(uri) &&
                         "response".equals(localName)) {
-                    context.file = new HashMap<String,String>();
+                    context.fileBuilder =
+                        new SftpServletSshFile.Builder(context.fileSystemView);
                     return RESPONSE;
                 }
                 return super.startElement(
@@ -88,6 +107,7 @@ class WebDavSaxHandler extends DefaultHandler {
                     String qName, Attributes attributes) {
                 if (NAMESPACE_URI.equals(uri)) {
                     if ("href".equals(localName)) {
+                        context.charBuffer = new StringBuilder();
                         return HREF;
                     } else if ("propstat".equals(localName)) {
                         return PROPSTAT;
@@ -103,7 +123,7 @@ class WebDavSaxHandler extends DefaultHandler {
                     String qName) {
                 if (NAMESPACE_URI.equals(uri) &&
                         "response".equals(localName)) {
-                    context.files.add(context.file);
+                    context.files.add(context.fileBuilder.build());
                     return MULTISTATUS;
                 }
                 return super.endElement(context, uri, localName, qName);
@@ -116,6 +136,11 @@ class WebDavSaxHandler extends DefaultHandler {
                     String qName) {
                 if (NAMESPACE_URI.equals(uri) &&
                         "href".equals(localName)) {
+                    String path = context.charBuffer.toString();
+                    if (context.shouldDiscard(path)) {
+                        return DISCARD;
+                    }
+                    context.fileBuilder.path(context.charBuffer.toString());
                     return RESPONSE;
                 }
                 return super.endElement(context, uri, localName, qName);
@@ -125,7 +150,39 @@ class WebDavSaxHandler extends DefaultHandler {
             State characters(
                     WebDavSaxHandler context, char[] ch, int start,
                     int length) {
-                context.file.put("path", new String(ch, start, length).trim());
+                context.charBuffer.append(ch, start, length);
+                return this;
+            }
+        },
+        DISCARD {
+            @Override
+            State startElement(
+                    WebDavSaxHandler context, String uri, String localName,
+                    String qName, Attributes attributes) {
+                // TODO revisit, check for known types.
+                return this;
+            }
+            
+            @Override
+            State endElement(
+                    WebDavSaxHandler context, String uri, String localName,
+                    String qName) {
+                if (NAMESPACE_URI.equals(uri)) {
+                    if ("response".equals(localName)) {
+                        return MULTISTATUS;
+                    } else if ("multistatus".equals(localName)) {
+                        // We've gone too far
+                        return super.endElement(context, uri, localName, qName);
+                    }
+                }
+                // TODO revisit, check for known types.
+                return this;
+            }
+            
+            @Override
+            State characters(
+                    WebDavSaxHandler context, char[] ch, int start,
+                    int length) {
                 return this;
             }
         },
@@ -169,13 +226,14 @@ class WebDavSaxHandler extends DefaultHandler {
                     WebDavSaxHandler context, String uri, String localName,
                     String qName, Attributes attributes) {
                 if (NAMESPACE_URI.equals(uri)) {
-                    if ("creationdate".equals(localName)) {
-                        return CREATIONDATE;
-                    } else if ("getcontentlength".equals(localName)) {
+                    if ("getcontentlength".equals(localName)) {
+                        context.charBuffer = new StringBuilder();
                         return GETCONTENTLENGTH;
                     } else if ("getlastmodified".equals(localName)) {
+                        context.charBuffer = new StringBuilder();
                         return GETLASTMODIFIED;
                     } else if ("resourcetype".equals(localName)) {
+                        context.charBuffer = new StringBuilder();
                         return RESOURCETYPE;
                     }
                 }
@@ -200,27 +258,6 @@ class WebDavSaxHandler extends DefaultHandler {
                 return this;
             }
         },
-        CREATIONDATE {
-            @Override
-            State endElement(
-                    WebDavSaxHandler context, String uri, String localName,
-                    String qName) {
-                if (NAMESPACE_URI.equals(uri) &&
-                        "creationdate".equals(localName)) {
-                    return PROP;
-                }
-                return super.endElement(context, uri, localName, qName);
-            }
-            
-            @Override
-            State characters(
-                    WebDavSaxHandler context, char[] ch, int start,
-                    int length) {
-                context.file.put(
-                    "creationDate", new String(ch, start, length).trim());
-                return this;
-            }
-        },
         GETCONTENTLENGTH {
             @Override
             State endElement(
@@ -228,7 +265,9 @@ class WebDavSaxHandler extends DefaultHandler {
                     String qName) {
                 if (NAMESPACE_URI.equals(uri) &&
                         "getcontentlength".equals(localName)) {
-                    context.file.put("isFile", "true");
+                    context.fileBuilder.contentLength(
+                        Long.valueOf(context.charBuffer.toString()));
+                    context.fileBuilder.isFile(true);
                     return PROP;
                 }
                 return super.endElement(context, uri, localName, qName);
@@ -238,8 +277,7 @@ class WebDavSaxHandler extends DefaultHandler {
             State characters(
                     WebDavSaxHandler context, char[] ch, int start,
                     int length) {
-                context.file.put(
-                    "contentLength", new String(ch, start, length).trim());
+                context.charBuffer.append(ch, start, length);
                 return this;
             }
         },
@@ -250,6 +288,8 @@ class WebDavSaxHandler extends DefaultHandler {
                     String qName) {
                 if (NAMESPACE_URI.equals(uri) &&
                         "getlastmodified".equals(localName)) {
+                    context.fileBuilder.lastModifiedRfc1123(
+                        context.charBuffer.toString());
                     return PROP;
                 }
                 return super.endElement(context, uri, localName, qName);
@@ -259,8 +299,7 @@ class WebDavSaxHandler extends DefaultHandler {
             State characters(
                     WebDavSaxHandler context, char[] ch, int start,
                     int length) {
-                context.file.put(
-                    "lastModified", new String(ch, start, length).trim());
+                context.charBuffer.append(ch, start, length);
                 return this;
             }
         },
@@ -278,7 +317,7 @@ class WebDavSaxHandler extends DefaultHandler {
                     String qName) {
                 if (NAMESPACE_URI.equals(uri)) {
                     if ("collection".equals(localName)) {
-                        context.file.put("isDirectory", "true");
+                        context.fileBuilder.isDirectory(true);
                         return this;
                     } else if ("resourcetype".equals(localName)) {
                         return PROP;
