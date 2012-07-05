@@ -28,7 +28,7 @@ import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * SAX handler that parses DAV:multistatus XML content into
- * {@link SftpServletSshFile}s.
+ * {@link ServletResourceSshFile}s.
  * 
  * TODO could this be an inner class or a more generic SftpServletFileSystemView?
  * 
@@ -46,8 +46,8 @@ class WebDavSaxHandler extends DefaultHandler {
         this.pathToDiscard = pathToDiscard;
     }
     
-    private List<SftpServletSshFile> files;
-    private SftpServletSshFile.Builder fileBuilder;
+    private List<ServletResourceSshFile> files;
+    private ServletResourceSshFile.Builder fileBuilder;
     private StringBuilder charBuffer;
     
     private boolean shouldDiscard(String path) {
@@ -55,7 +55,7 @@ class WebDavSaxHandler extends DefaultHandler {
             new File(pathToDiscard).equals(new File(path));
     }
     
-    public List<SftpServletSshFile> getFiles() {
+    public List<ServletResourceSshFile> getFiles() {
         return Collections.unmodifiableList(files);
     }
     
@@ -67,7 +67,7 @@ class WebDavSaxHandler extends DefaultHandler {
                     String qName, Attributes attributes) {
                 if (NAMESPACE_URI.equals(uri) &&
                         "multistatus".equals(localName)) {
-                    context.files = new ArrayList<SftpServletSshFile>();
+                    context.files = new ArrayList<ServletResourceSshFile>();
                     return MULTISTATUS;
                 }
                 return super.startElement(
@@ -82,7 +82,7 @@ class WebDavSaxHandler extends DefaultHandler {
                 if (NAMESPACE_URI.equals(uri) &&
                         "response".equals(localName)) {
                     context.fileBuilder =
-                        new SftpServletSshFile.Builder(context.fileSystemView);
+                        new ServletResourceSshFile.Builder(context.fileSystemView);
                     return RESPONSE;
                 }
                 return super.startElement(
@@ -265,7 +265,7 @@ class WebDavSaxHandler extends DefaultHandler {
                     String qName) {
                 if (NAMESPACE_URI.equals(uri) &&
                         "getcontentlength".equals(localName)) {
-                    context.fileBuilder.contentLength(
+                    context.fileBuilder.size(
                         Long.valueOf(context.charBuffer.toString()));
                     context.fileBuilder.isFile(true);
                     return PROP;

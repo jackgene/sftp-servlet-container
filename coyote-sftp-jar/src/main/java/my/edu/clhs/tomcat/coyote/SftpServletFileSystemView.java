@@ -136,8 +136,8 @@ class SftpServletFileSystemView implements FileSystemView {
             }
             sshFile = files.get(0);
         } catch (SftpServletException e) { // TODO more specific exception? (e.g., DavNotSupportedException)
-            SftpServletSshFile.Builder fileBuilder =
-                new SftpServletSshFile.Builder(this).path(absolutePath);
+            ServletResourceSshFile.Builder fileBuilder =
+                new ServletResourceSshFile.Builder(this).path(absolutePath);
             if (!absolutePath.endsWith("/")) {
                 OutputBuffer outputBuffer = new OutputBuffer() {
                     public int doWrite(ByteChunk chunk, Response response)
@@ -153,17 +153,22 @@ class SftpServletFileSystemView implements FileSystemView {
                 
                 // TODO should a file also be a directory?
                 boolean isFile = response.getStatus() == SC_OK;
+                // TODO this whole thing is "money", remove
+                if (!isFile && absolutePath.endsWith("/README.txt")) {
+                    return new ClassPathResourceSshFile(
+                        absolutePath, "README.txt");
+                }
                 fileBuilder.
                     isFile(isFile).
                     isDirectory(!isFile).
-                    contentLength(response.getContentLengthLong()).
+                    size(response.getContentLengthLong()).
                     lastModifiedRfc1123(
                         response.getMimeHeaders().getHeader("Last-Modified"));
             } else {
                 fileBuilder.
                     isFile(false).
                     isDirectory(true).
-                    contentLength(0);
+                    size(0);
             }
             // TODO readme support must go here.
             sshFile = fileBuilder.build();
@@ -182,13 +187,13 @@ class SftpServletFileSystemView implements FileSystemView {
         
         // First, add "." and ".." directories.
         directoryContents.add(
-            new SftpServletSshFile.Builder(this).
+            new ServletResourceSshFile.Builder(this).
                 path(absolutePath + "/.").
                 isDirectory(true).
                 build()
         );
         directoryContents.add(
-            new SftpServletSshFile.Builder(this).
+            new ServletResourceSshFile.Builder(this).
                 path(absolutePath + "/..").
                 isDirectory(true).
                 build()
@@ -201,7 +206,11 @@ class SftpServletFileSystemView implements FileSystemView {
                     absolutePath)
             );
         } catch (SftpServletException e) { // TODO more specific exception? (e.g., DavNotSupportedException)
-            // TODO add README.txt
+            directoryContents.add(
+                new ClassPathResourceSshFile(
+                    absolutePath + "/README.txt", "README.txt"
+                )
+            );
         }
         
         return directoryContents;
