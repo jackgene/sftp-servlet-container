@@ -28,11 +28,11 @@ import java.util.List;
 
 import org.apache.sshd.server.SshFile;
 
-class SftpServletSshFile implements SshFile {
+class ServletResourceSshFile implements SshFile {
     private static final DateFormat RFC1123_DATE_FORMAT =
         new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
     
-    private final SftpServletFileSystemView fileSystemView;
+    private final SftpServletFileSystemView fileSystem;
     /**
      * The path of this file. {@link File} is used here to take
      * advantage of common file operations it provides, such as
@@ -46,22 +46,19 @@ class SftpServletSshFile implements SshFile {
     private final boolean isDirectory;
     private final long contentLength;
     
-    private SftpServletSshFile(
-            SftpServletFileSystemView fileSystemView, String path,
-            String lastModifiedRfc1123, boolean isFile, boolean isDirectory,
-            long contentLength) {
-        this.fileSystemView = fileSystemView;
-        this.path = new File(path);
+    private ServletResourceSshFile(Builder builder) {
+        fileSystem = builder.fileSystemView;
+        path = new File(builder.path);
         try {
-            this.absolutePath = this.path.getCanonicalPath();
+            absolutePath = path.getCanonicalPath();
         } catch (IOException e) {
             // TODO make my own runtime exception?
             throw new RuntimeException(e);
         }
-        this.lastModifiedRfc1123 = lastModifiedRfc1123;
-        this.isFile = isFile;
-        this.isDirectory = isDirectory;
-        this.contentLength = contentLength;
+        lastModifiedRfc1123 = builder.lastModifiedRfc1123;
+        isFile = builder.isFile;
+        isDirectory = builder.isDirectory;
+        contentLength = builder.size;
     }
     
     public static class Builder {
@@ -88,10 +85,9 @@ class SftpServletSshFile implements SshFile {
             return this;
         }
         
-        // TODO rename to "size"
-        private long contentLength = 0L;
-        public Builder contentLength(long contentLength) {
-            this.contentLength = contentLength;
+        private long size = 0L;
+        public Builder size(long size) {
+            this.size = size;
             return this;
         }
         
@@ -101,10 +97,8 @@ class SftpServletSshFile implements SshFile {
             return this;
         }
        
-        public SftpServletSshFile build() {
-            return new SftpServletSshFile(
-                fileSystemView, path, lastModifiedRfc1123,
-                isFile, isDirectory, contentLength);
+        public ServletResourceSshFile build() {
+            return new ServletResourceSshFile(this);
         }
     }
     
@@ -130,17 +124,17 @@ class SftpServletSshFile implements SshFile {
     
     // @Override
     public boolean move(SshFile destination) {
-        throw new UnsupportedOperationException();
+        return false;
     }
     
     // @Override
     public boolean mkdir() {
-        throw new UnsupportedOperationException();
+        return false;
     }
     
     // @Override
     public List<SshFile> listSshFiles() {
-        return fileSystemView.getDirectoryContents(getAbsolutePath());
+        return fileSystem.getDirectoryContents(getAbsolutePath());
     }
     
     // @Override
@@ -174,8 +168,8 @@ class SftpServletSshFile implements SshFile {
     
     // @Override
     public void handleClose() throws IOException {
-        // TODO close input/output streams
         // do nothing
+        // TODO check for unclosed input/output streams?
     }
     
     // @Override
@@ -208,7 +202,7 @@ class SftpServletSshFile implements SshFile {
     
     // @Override
     public boolean doesExist() {
-        return true; // TODO this makes it HttpServlet compatible.
+        return true; // This makes it HttpServlet compatible.
     }
     
     // @Override
@@ -217,18 +211,19 @@ class SftpServletSshFile implements SshFile {
         throw new UnsupportedOperationException("Pending");
     }
     
+    // @Override
     public boolean create() throws IOException {
         return true;
     }
     
     // @Override
     public OutputStream createOutputStream(long offset) throws IOException {
-        return fileSystemView.getFileOutputStream(getAbsolutePath());
+        return fileSystem.getFileOutputStream(getAbsolutePath());
     }
     
     // @Override
     public InputStream createInputStream(long offset) throws IOException {
-        InputStream is = fileSystemView.getFileInputStream(getAbsolutePath());
+        InputStream is = fileSystem.getFileInputStream(getAbsolutePath());
         if (is != null) {
             try {
                 is.skip(offset);
