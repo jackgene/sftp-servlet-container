@@ -136,42 +136,33 @@ class SftpServletFileSystemView implements FileSystemView {
             }
             sshFile = files.get(0);
         } catch (SftpServletException e) { // TODO more specific exception? (e.g., DavNotSupportedException)
-            ServletResourceSshFile.Builder fileBuilder =
-                new ServletResourceSshFile.Builder(this).path(absolutePath);
-            if (!absolutePath.endsWith("/")) {
-                OutputBuffer outputBuffer = new OutputBuffer() {
-                    public int doWrite(ByteChunk chunk, Response response)
-                            throws IOException {
-                        return chunk.getLength();
-                    }
-                };
-                
-                Response response = protocol.service(
-                    URI.create(absolutePath), Constants.HEAD, userName,
-                    Collections.<String,String>emptyMap(),
-                    null, outputBuffer);
-                
-                // TODO should a file also be a directory?
-                boolean isFile = response.getStatus() == SC_OK;
-                // TODO this whole thing is "money", remove
-                if (!isFile && absolutePath.endsWith("/README.txt")) {
-                    return new ClassPathResourceSshFile(
-                        absolutePath, "README.txt");
+            OutputBuffer outputBuffer = new OutputBuffer() {
+                public int doWrite(ByteChunk chunk, Response response)
+                        throws IOException {
+                    return chunk.getLength();
                 }
-                fileBuilder.
-                    isFile(isFile).
-                    isDirectory(!isFile).
-                    size(response.getContentLengthLong()).
-                    lastModifiedRfc1123(
-                        response.getMimeHeaders().getHeader("Last-Modified"));
+            };
+            
+            Response response = protocol.service(
+                URI.create(absolutePath), Constants.HEAD, userName,
+                Collections.<String,String>emptyMap(),
+                null, outputBuffer);
+            
+            boolean isFile = response.getStatus() == SC_OK;
+            if (!isFile && absolutePath.endsWith("/README.txt")) {
+                sshFile = new ClassPathResourceSshFile(
+                    absolutePath, "README.txt");
             } else {
+                ServletResourceSshFile.Builder fileBuilder =
+                    new ServletResourceSshFile.Builder(this).path(absolutePath);
                 fileBuilder.
-                    isFile(false).
-                    isDirectory(true).
-                    size(0);
+                isFile(isFile).
+                isDirectory(!isFile).
+                size(response.getContentLengthLong()).
+                lastModifiedRfc1123(
+                    response.getMimeHeaders().getHeader("Last-Modified"));
+                sshFile = fileBuilder.build();
             }
-            // TODO readme support must go here.
-            sshFile = fileBuilder.build();
         }
         
         return sshFile;
