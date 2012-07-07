@@ -20,6 +20,7 @@ package my.edu.clhs.tomcat.coyote;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
@@ -89,9 +90,11 @@ class SftpServletFileSystemView implements FileSystemView {
             URI.create(absolutePath), "PROPFIND", userName, propFindHeaders,
             propFindBuf, webDavBuf);
         int status = response.getStatus();
-        // Technically, only SC_MULTI_STATUS (207) is valid, however it is
-        // almost impossible to get some web frameworks (including Spring MVC)
-        // to return 207.
+        // Technically, only SC_MULTI_STATUS (207) is valid, however
+        // it is almost impossible to get some web frameworks
+        // (including Spring MVC) to return 207.
+        // SC_NOT_FOUND is technically also valid, but for our purposes
+        // we'd like to process it as if it's an invalid request.
         if (status != SC_MULTI_STATUS && status != SC_OK) {
             throw new DavUnsupportedException(absolutePath);
         }
@@ -121,6 +124,15 @@ class SftpServletFileSystemView implements FileSystemView {
         return handler.getFiles();
     }
     
+    private boolean isEquivalent(String path, SshFile file) {
+        try {
+            return (new File(path).getCanonicalPath()).
+                equals(file.getAbsolutePath());
+        } catch (IOException e) {
+            return false;
+        }
+    }
+    
     // @Override
     public SshFile getFile(String path) {
         SshFile sshFile = null;
@@ -134,10 +146,20 @@ class SftpServletFileSystemView implements FileSystemView {
                     propFindResponseXmlBody(absolutePath, 0),
                     null);
             
-            if (files.size() != 1) {
-                throw new RuntimeException("expected 1 result");
+            // Strictly speaking, "files" should always contain exactly
+            // one item.
+            // However some broken DAV implementations may return more
+            // than one item.
+            for (SshFile file : files) {
+                if (isEquivalent(path, file)) {
+                    sshFile = file;
+                    break;
+                }
             }
-            sshFile = files.get(0);
+            // And other broken DAV implementations may return none.
+            if (sshFile == null) {
+                throw new InvalidDavContentException(absolutePath);
+            }
         } catch (DavProcessingException e) {
             OutputBuffer outputBuffer = new OutputBuffer() {
                 public int doWrite(ByteChunk chunk, Response response)
