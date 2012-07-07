@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 import org.apache.coyote.Adapter;
 import org.apache.coyote.InputBuffer;
@@ -87,6 +88,10 @@ public class SftpProtocol implements ProtocolHandler {
     public Adapter getAdapter() { return adapter; }
     // @Override - ProtocolHandler
     public void setAdapter(Adapter adapter) { this.adapter = adapter; }
+    
+    public Executor getExecutor() {
+        return endpoint.getScheduledExecutorService();
+    }
     
     public int getPort() { return endpoint.getPort(); }
     public void setPort(int port) { endpoint.setPort(port); }
