@@ -13,20 +13,20 @@ repositories {
 
 dependencies {
     ext.SLF4J_VERSION = '1.6.+'
-    ext.TOMCAT_VERSION = '6.0.+'
+    ext.TOMCAT_VERSION = '7.0.+'
     
     compile(
         "org.apache.sshd:sshd-core:0.6.0",
-        "org.apache.tomcat:coyote:${TOMCAT_VERSION}",
+        "org.apache.tomcat:tomcat-coyote:${TOMCAT_VERSION}",
         "org.slf4j:slf4j-api:${SLF4J_VERSION}",
     )
     runtime(
-        "org.apache.tomcat:jasper:${TOMCAT_VERSION}",
+        "org.apache.tomcat:tomcat-jasper:${TOMCAT_VERSION}",
     ) {
         exclude module: 'ecj'
     }
     runtime(
-        "org.apache.tomcat:jasper-jdt:${TOMCAT_VERSION}",
+//        "org.apache.tomcat:jasper-jdt:${TOMCAT_VERSION}",
         "org.slf4j:slf4j-jdk14:${SLF4J_VERSION}",
         "javax.transaction:jta:1.1",
     )
