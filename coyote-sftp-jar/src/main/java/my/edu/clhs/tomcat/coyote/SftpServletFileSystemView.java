@@ -20,6 +20,7 @@ package my.edu.clhs.tomcat.coyote;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -62,9 +63,8 @@ class SftpServletFileSystemView implements FileSystemView {
         "<D:propfind xmlns:D=\"DAV:\">" +
             "<D:allprop/>" +
         "</D:propfind>";
-    // TODO revisit exception handling
     private InputStream propFindResponseXmlBody(String absolutePath, int depth)
-            throws SftpServletException {
+            throws DavProcessingException {
         InputBuffer propFindBuf = new InputBuffer() {
             public int doRead(ByteChunk chunk, Request request)
                     throws IOException {
@@ -93,15 +93,15 @@ class SftpServletFileSystemView implements FileSystemView {
         // almost impossible to get some web frameworks (including Spring MVC)
         // to return 207.
         if (status != SC_MULTI_STATUS && status != SC_OK) {
-            throw new SftpServletException(
-                "DAV not supported by web application.");
+            throw new DavUnsupportedException(absolutePath);
         }
         
         return new ByteArrayInputStream(webDavChunk.getBuffer());
     }
     
     private List<? extends SshFile> xmlToFiles(
-            InputStream multiStatusXml, String pathToDiscard) {
+            String absolutePath, InputStream multiStatusXml,
+            String pathToDiscard) throws DavProcessingException {
         SAXParserFactory factory = SAXParserFactory.newInstance();
         factory.setNamespaceAware(true);
         factory.setValidating(true);
@@ -111,11 +111,11 @@ class SftpServletFileSystemView implements FileSystemView {
             SAXParser parser = factory.newSAXParser();
             parser.parse(multiStatusXml, handler);
         } catch (SAXException e) {
-            throw new RuntimeException(e);
+            throw new InvalidDavXmlException(absolutePath, e);
         } catch (ParserConfigurationException e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException(e);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new IOError(e);
         }
         
         return handler.getFiles();
@@ -129,13 +129,16 @@ class SftpServletFileSystemView implements FileSystemView {
         
         try {
             List<? extends SshFile> files =
-                xmlToFiles(propFindResponseXmlBody(absolutePath, 0), null);
+                xmlToFiles(
+                    absolutePath,
+                    propFindResponseXmlBody(absolutePath, 0),
+                    null);
             
             if (files.size() != 1) {
                 throw new RuntimeException("expected 1 result");
             }
             sshFile = files.get(0);
-        } catch (SftpServletException e) { // TODO more specific exception? (e.g., DavNotSupportedException)
+        } catch (DavProcessingException e) {
             OutputBuffer outputBuffer = new OutputBuffer() {
                 public int doWrite(ByteChunk chunk, Response response)
                         throws IOException {
@@ -193,10 +196,11 @@ class SftpServletFileSystemView implements FileSystemView {
             // TODO try and make "." and ".." display the correct metadata (date)
             directoryContents.addAll(
                 xmlToFiles(
+                    absolutePath,
                     propFindResponseXmlBody(absolutePath, 1),
                     absolutePath)
             );
-        } catch (SftpServletException e) { // TODO more specific exception? (e.g., DavNotSupportedException)
+        } catch (DavProcessingException e) {
             directoryContents.add(
                 new ClassPathResourceSshFile(
                     absolutePath + "/README.txt", "README.txt"
