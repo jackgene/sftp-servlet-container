@@ -53,7 +53,10 @@ class ServletResourceSshFile implements SshFile {
         try {
             absolutePath = path.getCanonicalPath();
         } catch (IOException e) {
-            throw new IllegalArgumentException("malformed path spec", e);
+            throw new IllegalArgumentException(
+                "Cannot create ServletResourceSshFile with malformed path spec",
+                e
+            );
         }
         lastModifiedRfc1123 = builder.lastModifiedRfc1123;
         isFile = builder.isFile;
