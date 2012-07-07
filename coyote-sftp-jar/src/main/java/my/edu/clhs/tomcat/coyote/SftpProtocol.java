@@ -226,6 +226,11 @@ public class SftpProtocol implements ProtocolHandler {
     }
     
     // @Override - ProtocolHandler
+    public void stop() throws Exception {
+        endpoint.stop();
+    }
+    
+    // @Override - ProtocolHandler
     public void destroy() throws Exception {
         endpoint.stop(true);
     }
