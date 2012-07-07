@@ -274,7 +274,9 @@ class SftpServletFileSystemView implements FileSystemView {
                     try {
                         pos.close();
                     } catch (IOException e) {
-                        throw new RuntimeException(e);
+                        // TODO user proper logger
+                        e.printStackTrace();
+                        // do nothing
                     }
                 }
             }
