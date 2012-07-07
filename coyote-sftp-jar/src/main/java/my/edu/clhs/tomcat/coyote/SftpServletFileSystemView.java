@@ -43,6 +43,7 @@ import org.apache.coyote.OutputBuffer;
 import org.apache.coyote.Request;
 import org.apache.coyote.Response;
 import org.apache.coyote.http11.Constants;
+import org.apache.coyote.http11.filters.VoidOutputFilter;
 import org.apache.sshd.server.FileSystemView;
 import org.apache.sshd.server.SshFile;
 import org.apache.tomcat.util.buf.ByteChunk;
@@ -78,10 +79,18 @@ class SftpServletFileSystemView implements FileSystemView {
         };
         final ByteChunk webDavChunk = new ByteChunk();
         OutputBuffer webDavBuf = new OutputBuffer() {
+            private long bytesWritten = 0;
+            
             public int doWrite(ByteChunk chunk, Response response)
                     throws IOException {
                 webDavChunk.append(chunk);
-                return chunk.getLength();
+                int len = chunk.getLength();
+                bytesWritten += len;
+                return len;
+            }
+            
+            public long getBytesWritten() {
+                return bytesWritten;
             }
         };
         Map<String,String> propFindHeaders = new HashMap<String,String>();
@@ -161,17 +170,10 @@ class SftpServletFileSystemView implements FileSystemView {
                 throw new InvalidDavContentException(absolutePath);
             }
         } catch (DavProcessingException e) {
-            OutputBuffer outputBuffer = new OutputBuffer() {
-                public int doWrite(ByteChunk chunk, Response response)
-                        throws IOException {
-                    return chunk.getLength();
-                }
-            };
-            
             Response response = protocol.service(
                 URI.create(absolutePath), Constants.HEAD, userName,
                 Collections.<String,String>emptyMap(),
-                null, outputBuffer);
+                null, new VoidOutputFilter());
             
             boolean isFile = response.getStatus() == SC_OK;
             if (!isFile && absolutePath.endsWith("/README.txt")) {
@@ -250,19 +252,10 @@ class SftpServletFileSystemView implements FileSystemView {
                         return len;
                     }
                 };
-                OutputBuffer outputBuffer = new OutputBuffer() {
-                    public int doWrite(
-                            ByteChunk chunk, Response response)
-                            throws IOException {
-                        // Do nothing
-                        return chunk.getLength();
-                    }
-                };
-                
                 protocol.service(
                     URI.create(absolutePath), "PUT", userName,
                     Collections.<String,String>emptyMap(),
-                    inputBuffer, outputBuffer);
+                    inputBuffer, new VoidOutputFilter());
             }
         }).start();
         
@@ -271,19 +264,26 @@ class SftpServletFileSystemView implements FileSystemView {
     
     public InputStream getFileInputStream(final String absolutePath)
             throws IOException {
-        InputStream is = new PipedInputStream();
-        final OutputStream pos =
-            new PipedOutputStream((PipedInputStream)is);
+        PipedInputStream is = new PipedInputStream();
+        final OutputStream pos = new PipedOutputStream(is);
         
         new Thread(new Runnable() {
             public void run() {
                 OutputBuffer outputBuffer = new OutputBuffer() {
+                    private long bytesWritten = 0;
+                    
                     public int doWrite(
                             ByteChunk chunk, Response response)
                             throws IOException {
                         pos.write(chunk.getBuffer(),
                             chunk.getStart(), chunk.getLength());
-                        return chunk.getLength();
+                        int len = chunk.getLength();
+                        bytesWritten += len;
+                        return len;
+                    }
+                    
+                    public long getBytesWritten() {
+                        return bytesWritten;
                     }
                 };
                 
