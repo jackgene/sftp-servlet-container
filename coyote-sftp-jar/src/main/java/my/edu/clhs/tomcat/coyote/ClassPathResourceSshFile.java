@@ -60,7 +60,9 @@ class ClassPathResourceSshFile implements SshFile {
             try {
                 if (conn != null) conn.getInputStream().close();
             } catch (IOException e) {
-                // Can't close, too bad
+                // TODO user proper logger
+                e.printStackTrace();
+                // do nothing
             }
         }
     }
