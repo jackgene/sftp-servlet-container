@@ -1,5 +1,5 @@
 /*
- * SftpServletException.java
+ * DavUnsupportedException.java
  *
  * Copyright 2011-2012 Jack Leow
  *
@@ -18,18 +18,17 @@
 package my.edu.clhs.tomcat.coyote;
 
 /**
- * Indicates a problem with the SFTP Servlet subsystem.
+ * Indicates that the requested resource does not support DAV.
  * 
  * @author Jack Leow
  */
-public class SftpServletException extends Exception {
+class DavUnsupportedException extends DavProcessingException {
     private static final long serialVersionUID = 1L;
     
-    public SftpServletException(String msg) {
-        super(msg);
-    }
+    private static final String DEFAULT_MESSAGE =
+        "Resource does not support HTTP DAV methods";
     
-    public SftpServletException(String msg, Throwable cause) {
-        super(msg, cause);
+    public DavUnsupportedException(String resourcePath) {
+        super(DEFAULT_MESSAGE, resourcePath);
     }
 }
