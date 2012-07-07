@@ -23,7 +23,9 @@ import java.util.Collections;
 import java.util.List;
 
 import org.xml.sax.Attributes;
+import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
 import org.xml.sax.helpers.DefaultHandler;
 
 /**
@@ -331,13 +333,23 @@ class WebDavSaxHandler extends DefaultHandler {
         State startElement(
                 WebDavSaxHandler context, String uri, String localName,
                 String qName, Attributes attributes) {
-            throw new IllegalStateException();
+            throw new IllegalStateException(
+                String.format(
+                    "State (%s) does not expect start of element \"%s\"",
+                    this, localName
+                )
+            );
         }
         
         State endElement(
                 WebDavSaxHandler context, String uri, String localName,
                 String qName) {
-            throw new IllegalStateException();
+            throw new IllegalStateException(
+                String.format(
+                    "State (%s) does not expect end of element \"%s\"",
+                    this, localName
+                )
+            );
         }
         
         State characters(
@@ -345,9 +357,20 @@ class WebDavSaxHandler extends DefaultHandler {
             if ("".equals(new String(ch, start, length).trim())) {
                 return this;
             } else {
-                throw new IllegalStateException();
+                throw new IllegalStateException(
+                    String.format(
+                        "State (%s) does not expect characters", this
+                    )
+                );
             }
         }
+    }
+    
+    private Locator locator;
+    
+    @Override
+    public void setDocumentLocator(Locator locator) {
+        this.locator = locator;
     }
     
     private State current = State.START;
@@ -356,18 +379,34 @@ class WebDavSaxHandler extends DefaultHandler {
     public void startElement(
             String uri, String localName, String qName, Attributes attributes)
             throws SAXException {
-        current = current.startElement(this, uri, localName, qName, attributes);
+        try {
+            current = current.
+                startElement(this, uri, localName, qName, attributes);
+        } catch (IllegalStateException e) {
+            throw new SAXParseException(
+                "Error parsing DAV response", locator, e);
+        }
     }
     
     @Override
     public void endElement(String uri, String localName, String qName)
             throws SAXException {
-        current = current.endElement(this, uri, localName, qName);
+        try {
+            current = current.endElement(this, uri, localName, qName);
+        } catch (IllegalStateException e) {
+            throw new SAXParseException(
+                "Error parsing DAV response", locator, e);
+        }
     }
     
     @Override
     public void characters(char[] ch, int start, int length)
             throws SAXException {
-        current = current.characters(this, ch, start, length);
+        try {
+            current = current.characters(this, ch, start, length);
+        } catch (IllegalStateException e) {
+            throw new SAXParseException(
+                "Error parsing DAV response", locator, e);
+        }
     }
 }
