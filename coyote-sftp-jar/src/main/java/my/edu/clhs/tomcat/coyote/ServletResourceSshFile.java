@@ -18,6 +18,7 @@
 package my.edu.clhs.tomcat.coyote;
 
 import java.io.File;
+import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -52,8 +53,7 @@ class ServletResourceSshFile implements SshFile {
         try {
             absolutePath = path.getCanonicalPath();
         } catch (IOException e) {
-            // TODO make my own runtime exception?
-            throw new RuntimeException(e);
+            throw new IllegalArgumentException("malformed path spec", e);
         }
         lastModifiedRfc1123 = builder.lastModifiedRfc1123;
         isFile = builder.isFile;
@@ -191,7 +191,13 @@ class ServletResourceSshFile implements SshFile {
                 lastModified = RFC1123_DATE_FORMAT.
                     parse(lastModifiedRfc1123).getTime();
             } catch (ParseException e) {
-                throw new RuntimeException(e);
+                throw new IllegalStateException(
+                    String.format(
+                        "lastModifiedRfc1123 value (\"%s\") cannot be parsed",
+                        lastModifiedRfc1123
+                    ),
+                    e
+                );
             }
         } else {
             lastModified = System.currentTimeMillis();
@@ -228,7 +234,7 @@ class ServletResourceSshFile implements SshFile {
             try {
                 is.skip(offset);
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new IOError(e);
             }
         }
         

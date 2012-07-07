@@ -18,6 +18,7 @@
 package my.edu.clhs.tomcat.coyote;
 
 import java.io.File;
+import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -45,7 +46,7 @@ class ClassPathResourceSshFile implements SshFile {
         resourceUrl = getClass().getResource(resourceName);
         if (resourceUrl == null) {
             throw new IllegalArgumentException(
-                String.format("%s does not exist.", resourceName));
+                String.format("%s does not exist", resourceName));
         }
         
         URLConnection conn = null;
@@ -54,7 +55,7 @@ class ClassPathResourceSshFile implements SshFile {
             size = conn.getContentLength();
             lastModified = conn.getLastModified();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new IOError(e);
         } finally {
             try {
                 if (conn != null) conn.getInputStream().close();
