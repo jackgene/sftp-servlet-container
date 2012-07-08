@@ -50,6 +50,8 @@ import org.apache.tomcat.util.buf.ByteChunk;
 import org.xml.sax.SAXException;
 
 class SftpServletFileSystemView implements FileSystemView {
+    public static final String DEFAULT_FILE_OWNER = "nobody";
+    
     private static final int SC_MULTI_STATUS = 207;
     
     private final SftpProtocol protocol;
