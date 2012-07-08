@@ -32,8 +32,6 @@ import org.xml.sax.helpers.DefaultHandler;
  * SAX handler that parses DAV:multistatus XML content into
  * {@link ServletResourceSshFile}s.
  * 
- * TODO could this be an inner class or a more generic SftpServletFileSystemView?
- * 
  * @author Jack Leow
  */
 class WebDavSaxHandler extends DefaultHandler {
@@ -161,7 +159,12 @@ class WebDavSaxHandler extends DefaultHandler {
             State startElement(
                     WebDavSaxHandler context, String uri, String localName,
                     String qName, Attributes attributes) {
-                // TODO revisit, check for known types.
+                if (NAMESPACE_URI.equals(uri) && "response".equals(localName)) {
+                    // We should not see the start of another response
+                    return super.startElement(
+                        context, uri, localName, qName, attributes);
+                }
+                // Discard any other start elements
                 return this;
             }
             
@@ -169,15 +172,10 @@ class WebDavSaxHandler extends DefaultHandler {
             State endElement(
                     WebDavSaxHandler context, String uri, String localName,
                     String qName) {
-                if (NAMESPACE_URI.equals(uri)) {
-                    if ("response".equals(localName)) {
-                        return MULTISTATUS;
-                    } else if ("multistatus".equals(localName)) {
-                        // We've gone too far
-                        return super.endElement(context, uri, localName, qName);
-                    }
+                if (NAMESPACE_URI.equals(uri) && "response".equals(localName)) {
+                    return MULTISTATUS;
                 }
-                // TODO revisit, check for known types.
+                // Discard any other end elements
                 return this;
             }
             
@@ -237,9 +235,14 @@ class WebDavSaxHandler extends DefaultHandler {
                     } else if ("resourcetype".equals(localName)) {
                         context.charBuffer = new StringBuilder();
                         return RESOURCETYPE;
+                    } else if ("prop".equals(localName)) {
+                        // We should not see the start of another prop
+                        return super.startElement(
+                            context, uri, localName, qName, attributes);
                     }
                 }
-                // TODO revisit, check for known types.
+                // discard any other start elements
+                // prop can contain just about anything
                 return this;
             }
             
@@ -250,6 +253,8 @@ class WebDavSaxHandler extends DefaultHandler {
                 if (NAMESPACE_URI.equals(uri) && "prop".equals(localName)) {
                     return PROPSTAT;
                 }
+                // discard any other end elements
+                // prop can contain just about anything
                 return this;
             }
             
@@ -310,7 +315,14 @@ class WebDavSaxHandler extends DefaultHandler {
             State startElement(
                     WebDavSaxHandler context, String uri, String localName,
                     String qName, Attributes attributes) {
-                return this;
+                if (NAMESPACE_URI.equals(uri)) {
+                    if ("collection".equals(localName) ||
+                            "principal".equals(localName)) {
+                        return this;
+                    }
+                }
+                return super.startElement(
+                    context, uri, localName, qName, attributes);
             }
             
             @Override
@@ -321,11 +333,13 @@ class WebDavSaxHandler extends DefaultHandler {
                     if ("collection".equals(localName)) {
                         context.fileBuilder.isDirectory(true);
                         return this;
+                    } else if ("principal".equals(localName)) {
+                        return this;
                     } else if ("resourcetype".equals(localName)) {
                         return PROP;
                     }
                 }
-                return this;
+                return super.endElement(context, uri, localName, qName);
             }
         },
         END;
@@ -407,6 +421,14 @@ class WebDavSaxHandler extends DefaultHandler {
         } catch (IllegalStateException e) {
             throw new SAXParseException(
                 "Error parsing DAV response", locator, e);
+        }
+    }
+    
+    @Override
+    public void endDocument() throws SAXException {
+        if (current != State.END) {
+            throw new SAXParseException(
+                "Error parsing DAV response", locator);
         }
     }
 }
