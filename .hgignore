@@ -12,6 +12,7 @@ Syntax: regexp
 
 # Misc
 ^coyote-sftp-jar/testServer/key\.ser$
+^coyote-sftp-jar/testServer/logs
 ^coyote-sftp-jar/testServer/webapps
 ^coyote-sftp-jar/testServer/work/Catalina/localhost
 ^coyote-sftp-jar/testServer/conf/Catalina/localhost

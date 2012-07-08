@@ -21,14 +21,9 @@ dependencies {
         "org.slf4j:slf4j-api:${SLF4J_VERSION}",
     )
     runtime(
+        "org.apache.tomcat:tomcat-catalina:${TOMCAT_VERSION}",
         "org.apache.tomcat:tomcat-jasper:${TOMCAT_VERSION}",
-    ) {
-        exclude module: 'ecj'
-    }
-    runtime(
-//        "org.apache.tomcat:jasper-jdt:${TOMCAT_VERSION}",
-        "org.slf4j:slf4j-jdk14:${SLF4J_VERSION}",
-        "javax.transaction:jta:1.1",
+        "org.slf4j:slf4j-simple:${SLF4J_VERSION}",
     )
     testCompile(
         "junit:junit:4.+",
@@ -36,7 +31,7 @@ dependencies {
 }
 
 task runTestServer(type: JavaExec, depends: classes) {
-    main = 'org.apache.catalina.startup.Catalina'
+    main = 'org.apache.catalina.startup.Bootstrap'
     args 'start'
     workingDir = project.projectDir.absolutePath + '/testServer'
     classpath configurations.runtime
