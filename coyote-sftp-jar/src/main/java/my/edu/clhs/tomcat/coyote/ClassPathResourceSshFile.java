@@ -78,6 +78,11 @@ class ClassPathResourceSshFile implements SshFile {
     }
     
     // @Override
+    public String getOwner() {
+        return SftpServletFileSystemView.DEFAULT_FILE_OWNER;
+    }
+    
+    // @Override
     public void truncate() throws IOException {
         throw new UnsupportedOperationException();
     }
