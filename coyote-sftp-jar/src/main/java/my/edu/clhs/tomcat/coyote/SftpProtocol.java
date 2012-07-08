@@ -89,9 +89,13 @@ public class SftpProtocol implements ProtocolHandler {
     // @Override - ProtocolHandler
     public void setAdapter(Adapter adapter) { this.adapter = adapter; }
     
+    // @Override - ProtocolHandler
     public Executor getExecutor() {
         return endpoint.getScheduledExecutorService();
     }
+    
+    // @Override - ProtocolHandler
+    public boolean isAprRequired() { return false; }
     
     public int getPort() { return endpoint.getPort(); }
     public void setPort(int port) { endpoint.setPort(port); }
