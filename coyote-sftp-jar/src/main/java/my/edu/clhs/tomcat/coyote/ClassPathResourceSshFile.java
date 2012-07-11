@@ -83,28 +83,23 @@ class ClassPathResourceSshFile implements SshFile {
     }
     
     // @Override
-    public void truncate() throws IOException {
-        throw new UnsupportedOperationException();
-    }
-    
-    // @Override
-    public boolean setLastModified(long time) {
+    public boolean isDirectory() {
         return false;
     }
     
     // @Override
-    public boolean move(SshFile destination) {
-        return false;
+    public boolean isFile() {
+        return true;
     }
     
     // @Override
-    public boolean mkdir() {
-        return false;
+    public boolean doesExist() {
+        return true;
     }
     
     // @Override
-    public List<SshFile> listSshFiles() {
-        throw new UnsupportedOperationException();
+    public boolean isReadable() {
+        return true;
     }
     
     // @Override
@@ -122,32 +117,6 @@ class ClassPathResourceSshFile implements SshFile {
     }
     
     // @Override
-    public boolean isReadable() {
-        return true;
-    }
-    
-    // @Override
-    public boolean isFile() {
-        return true;
-    }
-    
-    // @Override
-    public boolean isDirectory() {
-        return false;
-    }
-    
-    // @Override
-    public void handleClose() throws IOException {
-        // do nothing
-        // TODO check for unclosed input/output streams?
-    }
-    
-    // @Override
-    public long getSize() {
-        return size;
-    }
-    
-    // @Override
     public SshFile getParentFile() {
         throw new UnsupportedOperationException();
     }
@@ -158,8 +127,18 @@ class ClassPathResourceSshFile implements SshFile {
     }
     
     // @Override
-    public boolean doesExist() {
-        return true;
+    public boolean setLastModified(long time) {
+        return false;
+    }
+    
+    // @Override
+    public long getSize() {
+        return size;
+    }
+    
+    // @Override
+    public boolean mkdir() {
+        return false;
     }
     
     // @Override
@@ -173,6 +152,21 @@ class ClassPathResourceSshFile implements SshFile {
     }
     
     // @Override
+    public void truncate() throws IOException {
+        throw new UnsupportedOperationException();
+    }
+    
+    // @Override
+    public boolean move(SshFile destination) {
+        return false;
+    }
+    
+    // @Override
+    public List<SshFile> listSshFiles() {
+        throw new UnsupportedOperationException();
+    }
+    
+    // @Override
     public OutputStream createOutputStream(long offset) throws IOException {
         throw new UnsupportedOperationException(
             "Cannot write to read-only file");
@@ -182,6 +176,12 @@ class ClassPathResourceSshFile implements SshFile {
     public InputStream createInputStream(long offset) throws IOException {
         URLConnection conn = resourceUrl.openConnection();
         return conn.getInputStream();
+    }
+    
+    // @Override
+    public void handleClose() throws IOException {
+        // do nothing
+        // TODO check for unclosed input/output streams?
     }
     
     @Override

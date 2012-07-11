@@ -121,28 +121,23 @@ class ServletResourceSshFile implements SshFile {
     }
     
     // @Override
-    public void truncate() throws IOException {
-        // do nothing
+    public boolean isDirectory() {
+        return isDirectory;
     }
     
     // @Override
-    public boolean setLastModified(long time) {
-        return false;
+    public boolean isFile() {
+        return isFile;
     }
     
     // @Override
-    public boolean move(SshFile destination) {
-        return false;
+    public boolean doesExist() {
+        return true; // This makes it HttpServlet compatible.
     }
     
     // @Override
-    public boolean mkdir() {
-        return false;
-    }
-    
-    // @Override
-    public List<SshFile> listSshFiles() {
-        return fileSystem.getDirectoryContents(getAbsolutePath());
+    public boolean isReadable() {
+        return true;
     }
     
     // @Override
@@ -157,32 +152,6 @@ class ServletResourceSshFile implements SshFile {
     // @Override
     public boolean isRemovable() {
         return false;
-    }
-    
-    // @Override
-    public boolean isReadable() {
-        return true;
-    }
-    
-    // @Override
-    public boolean isFile() {
-        return isFile;
-    }
-    
-    // @Override
-    public boolean isDirectory() {
-        return isDirectory;
-    }
-    
-    // @Override
-    public void handleClose() throws IOException {
-        // do nothing
-        // TODO check for unclosed input/output streams?
-    }
-    
-    // @Override
-    public long getSize() {
-        return contentLength;
     }
     
     // @Override
@@ -215,8 +184,19 @@ class ServletResourceSshFile implements SshFile {
     }
     
     // @Override
-    public boolean doesExist() {
-        return true; // This makes it HttpServlet compatible.
+    public boolean setLastModified(long time) {
+        return false;
+    }
+    
+    // @Override
+    public long getSize() {
+        return contentLength;
+    }
+    
+    // @Override
+    public boolean mkdir() {
+        // TODO implement for HTTP MKCOL.
+        throw new UnsupportedOperationException("Pending");
     }
     
     // @Override
@@ -228,6 +208,21 @@ class ServletResourceSshFile implements SshFile {
     // @Override
     public boolean create() throws IOException {
         return true;
+    }
+    
+    // @Override
+    public void truncate() throws IOException {
+        // do nothing
+    }
+    
+    // @Override
+    public boolean move(SshFile destination) {
+        return false;
+    }
+    
+    // @Override
+    public List<SshFile> listSshFiles() {
+        return fileSystem.getDirectoryContents(getAbsolutePath());
     }
     
     // @Override
@@ -252,5 +247,11 @@ class ServletResourceSshFile implements SshFile {
     @Override
     public String toString() {
         return path.toString();
+    }
+    
+    // @Override
+    public void handleClose() throws IOException {
+        // do nothing
+        // TODO check for unclosed input/output streams?
     }
 }
