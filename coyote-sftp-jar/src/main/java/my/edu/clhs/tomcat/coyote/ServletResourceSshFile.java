@@ -142,7 +142,7 @@ class ServletResourceSshFile implements SshFile {
     
     // @Override
     public boolean isWritable() {
-        return false;
+        return true;
     }
     
     public boolean isExecutable() {
@@ -201,8 +201,7 @@ class ServletResourceSshFile implements SshFile {
     
     // @Override
     public boolean delete() {
-        // TODO implement for HTTP DELETE.
-        throw new UnsupportedOperationException("Pending");
+        return fileSystem.deleteFile(getAbsolutePath());
     }
     
     // @Override

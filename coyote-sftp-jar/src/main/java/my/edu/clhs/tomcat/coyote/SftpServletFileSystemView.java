@@ -18,6 +18,7 @@
 package my.edu.clhs.tomcat.coyote;
 
 import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -202,24 +203,19 @@ class SftpServletFileSystemView implements FileSystemView {
         throw new UnsupportedOperationException();
     }
     
+    public boolean deleteFile(String absolutePath) {
+        Response response = protocol.service(
+            URI.create(absolutePath), "DELETE", userName,
+            Collections.<String,String>emptyMap(),
+            null, new VoidOutputFilter());
+        
+        return response.getStatus() == SC_NO_CONTENT;
+    }
+    
     public List<SshFile> getDirectoryContents(String absolutePath) {
         List<SshFile> directoryContents = new ArrayList<SshFile>();
         
-        // First, add "." and ".." directories.
-        directoryContents.add(
-            new ServletResourceSshFile.Builder(this).
-                path(absolutePath + "/.").
-                isDirectory(true).
-                build()
-        );
-        directoryContents.add(
-            new ServletResourceSshFile.Builder(this).
-                path(absolutePath + "/..").
-                isDirectory(true).
-                build()
-        );
         try {
-            // TODO try and make "." and ".." display the correct metadata (date)
             directoryContents.addAll(
                 xmlToFiles(
                     absolutePath,
