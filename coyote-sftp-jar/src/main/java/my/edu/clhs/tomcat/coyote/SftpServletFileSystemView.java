@@ -17,8 +17,10 @@
  */
 package my.edu.clhs.tomcat.coyote;
 
-import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static javax.servlet.http.HttpServletResponse.SC_CREATED;
 import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
+import static javax.servlet.http.HttpServletResponse.SC_NOT_FOUND;
+import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -102,16 +104,22 @@ class SftpServletFileSystemView implements FileSystemView {
             URI.create(absolutePath), "PROPFIND", userName, propFindHeaders,
             propFindBuf, webDavBuf);
         int status = response.getStatus();
+        
+        InputStream content;
         // Technically, only SC_MULTI_STATUS (207) is valid, however
         // it is almost impossible to get some web frameworks
         // (including Spring MVC) to return 207.
         // SC_NOT_FOUND is technically also valid, but for our purposes
         // we'd like to process it as if it's an invalid request.
-        if (status != SC_MULTI_STATUS && status != SC_OK) {
+        if (status == SC_MULTI_STATUS || status == SC_OK) {
+            content = new ByteArrayInputStream(webDavChunk.getBuffer());
+        } else if (status == SC_NOT_FOUND) {
+            content = null;
+        } else {
             throw new DavUnsupportedException(absolutePath);
         }
         
-        return new ByteArrayInputStream(webDavChunk.getBuffer());
+        return content;
     }
     
     private List<? extends SshFile> xmlToFiles(
@@ -152,25 +160,30 @@ class SftpServletFileSystemView implements FileSystemView {
             (path == null || path.equals(".")) ? "/" : path;
         
         try {
-            List<? extends SshFile> files =
-                xmlToFiles(
-                    absolutePath,
-                    propFindResponseXmlBody(absolutePath, 0),
-                    null);
-            
-            // Strictly speaking, "files" should always contain exactly
-            // one item.
-            // However some broken DAV implementations may return more
-            // than one item.
-            for (SshFile file : files) {
-                if (isEquivalent(path, file)) {
-                    sshFile = file;
-                    break;
+            InputStream responseXml = propFindResponseXmlBody(absolutePath, 0);
+            if (responseXml != null) {
+                List<? extends SshFile> files =
+                    xmlToFiles(absolutePath, responseXml, null);
+                
+                // Strictly speaking, "files" should always contain exactly
+                // one item.
+                // However some broken DAV implementations may return more
+                // than one item.
+                for (SshFile file : files) {
+                    if (isEquivalent(path, file)) {
+                        sshFile = file;
+                        break;
+                    }
                 }
-            }
-            // And other broken DAV implementations may return none.
-            if (sshFile == null) {
-                throw new InvalidDavContentException(absolutePath);
+                // And other broken DAV implementations may return none.
+                if (sshFile == null) {
+                    throw new InvalidDavContentException(absolutePath);
+                }
+            } else {
+                sshFile = new ServletResourceSshFile.Builder(this).
+                    path(absolutePath).
+                    doesExist(false).
+                    build();
             }
         } catch (DavProcessingException e) {
             Response response = protocol.service(
@@ -183,15 +196,15 @@ class SftpServletFileSystemView implements FileSystemView {
                 sshFile = new ClassPathResourceSshFile(
                     absolutePath, "README.txt");
             } else {
-                ServletResourceSshFile.Builder fileBuilder =
-                    new ServletResourceSshFile.Builder(this).path(absolutePath);
-                fileBuilder.
-                isFile(isFile).
-                isDirectory(!isFile).
-                size(response.getContentLengthLong()).
-                lastModifiedRfc1123(
-                    response.getMimeHeaders().getHeader("Last-Modified"));
-                sshFile = fileBuilder.build();
+                sshFile = new ServletResourceSshFile.Builder(this).
+                    path(absolutePath).
+                    isFile(isFile).
+                    isDirectory(!isFile).
+                    size(response.getContentLengthLong()).
+                    lastModifiedRfc1123(
+                        response.getMimeHeaders().getHeader("Last-Modified")
+                    ).
+                    build();
             }
         }
         
@@ -212,16 +225,25 @@ class SftpServletFileSystemView implements FileSystemView {
         return response.getStatus() == SC_NO_CONTENT;
     }
     
+    public boolean createDirectory(String absolutePath) {
+        Response response = protocol.service(
+            URI.create(absolutePath), "MKCOL", userName,
+            Collections.<String,String>emptyMap(),
+            null, new VoidOutputFilter());
+        
+        return response.getStatus() == SC_CREATED;
+    }
+    
     public List<SshFile> getDirectoryContents(String absolutePath) {
         List<SshFile> directoryContents = new ArrayList<SshFile>();
         
         try {
-            directoryContents.addAll(
-                xmlToFiles(
-                    absolutePath,
-                    propFindResponseXmlBody(absolutePath, 1),
-                    absolutePath)
-            );
+            InputStream responseXml = propFindResponseXmlBody(absolutePath, 1);
+            if (responseXml != null) {
+                directoryContents.addAll(
+                    xmlToFiles(absolutePath, responseXml, absolutePath)
+                );
+            }
         } catch (DavProcessingException e) {
             directoryContents.add(
                 new ClassPathResourceSshFile(

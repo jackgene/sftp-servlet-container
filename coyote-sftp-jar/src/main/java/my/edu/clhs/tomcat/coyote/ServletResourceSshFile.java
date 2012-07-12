@@ -41,28 +41,7 @@ class ServletResourceSshFile implements SshFile {
      * and {@link File#equals(Object)} to name a few.
      */
     private final File path;
-    private final String absolutePath;
     private final String lastModifiedRfc1123;
-    private final boolean isFile;
-    private final boolean isDirectory;
-    private final long contentLength;
-    
-    private ServletResourceSshFile(Builder builder) {
-        fileSystem = builder.fileSystemView;
-        path = new File(builder.path);
-        try {
-            absolutePath = path.getCanonicalPath();
-        } catch (IOException e) {
-            throw new IllegalArgumentException(
-                "Cannot create ServletResourceSshFile with malformed path spec",
-                e
-            );
-        }
-        lastModifiedRfc1123 = builder.lastModifiedRfc1123;
-        isFile = builder.isFile;
-        isDirectory = builder.isDirectory;
-        contentLength = builder.size;
-    }
     
     public static class Builder {
         private final SftpServletFileSystemView fileSystemView;
@@ -76,21 +55,21 @@ class ServletResourceSshFile implements SshFile {
             return this;
         }
         
-        private boolean isFile;
-        public Builder isFile(boolean isFile) {
-            this.isFile = isFile;
-            return this;
-        }
-        
         private boolean isDirectory;
         public Builder isDirectory(boolean isDirectory) {
             this.isDirectory = isDirectory;
             return this;
         }
         
-        private long size = 0L;
-        public Builder size(long size) {
-            this.size = size;
+        private boolean isFile;
+        public Builder isFile(boolean isFile) {
+            this.isFile = isFile;
+            return this;
+        }
+        
+        private boolean exists = true; // This makes it HttpServlet compatible.
+        public Builder doesExist(boolean exists) {
+            this.exists = exists;
             return this;
         }
         
@@ -100,11 +79,36 @@ class ServletResourceSshFile implements SshFile {
             return this;
         }
        
+        private long size = 0L;
+        public Builder size(long size) {
+            this.size = size;
+            return this;
+        }
+        
         public ServletResourceSshFile build() {
             return new ServletResourceSshFile(this);
         }
     }
     
+    private ServletResourceSshFile(Builder builder) {
+        fileSystem = builder.fileSystemView;
+        path = new File(builder.path);
+        try {
+            absolutePath = path.getCanonicalPath();
+        } catch (IOException e) {
+            throw new IllegalArgumentException(
+                "Cannot create ServletResourceSshFile with malformed path spec",
+                e
+            );
+        }
+        isDirectory = builder.isDirectory;
+        isFile = builder.isFile;
+        exists = builder.exists;
+        lastModifiedRfc1123 = builder.lastModifiedRfc1123;
+        size = builder.size;
+    }
+    
+    private final String absolutePath;
     // @Override
     public String getAbsolutePath() {
         return absolutePath;
@@ -120,19 +124,22 @@ class ServletResourceSshFile implements SshFile {
         return SftpServletFileSystemView.DEFAULT_FILE_OWNER;
     }
     
+    private final boolean isDirectory;
     // @Override
     public boolean isDirectory() {
         return isDirectory;
     }
     
+    private final boolean isFile;
     // @Override
     public boolean isFile() {
         return isFile;
     }
     
+    private final boolean exists;
     // @Override
     public boolean doesExist() {
-        return true; // This makes it HttpServlet compatible.
+        return exists;
     }
     
     // @Override
@@ -188,15 +195,15 @@ class ServletResourceSshFile implements SshFile {
         return false;
     }
     
+    private final long size;
     // @Override
     public long getSize() {
-        return contentLength;
+        return size;
     }
     
     // @Override
     public boolean mkdir() {
-        // TODO implement for HTTP MKCOL.
-        throw new UnsupportedOperationException("Pending");
+        return fileSystem.createDirectory(getAbsolutePath());
     }
     
     // @Override
