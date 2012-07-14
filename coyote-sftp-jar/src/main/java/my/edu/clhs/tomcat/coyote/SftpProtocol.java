@@ -27,6 +27,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
+import org.apache.catalina.Realm;
+import org.apache.catalina.connector.CoyoteAdapter;
+import org.apache.catalina.realm.NullRealm;
 import org.apache.coyote.Adapter;
 import org.apache.coyote.InputBuffer;
 import org.apache.coyote.OutputBuffer;
@@ -34,6 +37,7 @@ import org.apache.coyote.ProtocolHandler;
 import org.apache.coyote.Request;
 import org.apache.coyote.RequestInfo;
 import org.apache.coyote.Response;
+import org.apache.coyote.http11.filters.VoidOutputFilter;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 import org.apache.sshd.SshServer;
@@ -61,7 +65,6 @@ public class SftpProtocol implements ProtocolHandler {
     private static final Log log = LogFactory.getLog(SftpProtocol.class);
     
     private final SshServer endpoint = SshServer.setUpDefaultServer();
-    SshServer getEndpoint() { return endpoint; }
     
     private HashMap<String,Object> attributes = new HashMap<String,Object>();
     
@@ -103,6 +106,11 @@ public class SftpProtocol implements ProtocolHandler {
     public String getHost() { return endpoint.getHost(); }
     public void setHost(String host) { endpoint.setHost(host); }
     
+    private String anonymousUsername = "anonymous";
+    public void setAnonymousUsername(String anonymousUsername) {
+        this.anonymousUsername = anonymousUsername;
+    }
+    
     /**
      * Submit a request to be serviced by Coyote.
      * 
@@ -122,6 +130,7 @@ public class SftpProtocol implements ProtocolHandler {
         request.setInputBuffer(inputBuffer);
         
         Response response = new Response();
+        if (outputBuffer == null) outputBuffer = new VoidOutputFilter();
         response.setOutputBuffer(outputBuffer);
         
         RequestInfo rp = request.getRequestProcessor();
@@ -131,14 +140,14 @@ public class SftpProtocol implements ProtocolHandler {
         request.protocol().setString("SFTP");
         request.method().setString(method);
         request.requestURI().setString(path.normalize().toString());
-        if (userName != null) {
-            request.getRemoteUser().setString(userName);
-        }
-        MimeHeaders reqHeaders = request.getMimeHeaders();
-        for (Map.Entry<String,String> header : headers.entrySet()) {
-            reqHeaders.
+        request.getRemoteUser().setString(userName);
+        if (headers != null) {
+            MimeHeaders reqHeaders = request.getMimeHeaders();
+            for (Map.Entry<String,String> header : headers.entrySet()) {
+                reqHeaders.
                 setValue(header.getKey()).
                 setString(header.getValue());
+            }
         }
         request.setResponse(response);
         response.setRequest(request);
@@ -170,14 +179,36 @@ public class SftpProtocol implements ProtocolHandler {
             // @Override
             public boolean authenticate(
                     String username, String password, ServerSession session) {
-                return username != null && username.equals(password);
+                final boolean authenticated;
+                
+                if (anonymousUsername.equals(username)) {
+                    authenticated = true;
+                } else {
+                    // Ideally, we'd be able to access the realm without
+                    // making a request, since this does not appear to be
+                    // possible, just make a cheap request
+                    // TODO see if there are other ways to get access of Realm
+                    Response response = service(
+                        URI.create("/"), "FAKEVERB", null, null, null, null);
+                    
+                    org.apache.catalina.connector.Request catalinaReq =
+                        (org.apache.catalina.connector.Request)response.
+                        getRequest().getNote(CoyoteAdapter.ADAPTER_NOTES);
+                    Realm realm = catalinaReq.getConnector().getService().
+                        getContainer().getRealm();
+                    
+                    authenticated = realm instanceof NullRealm ||
+                        realm.authenticate(username, password) != null;
+                }
+                
+                return authenticated;
             }
         });
         endpoint.setPublickeyAuthenticator(new PublickeyAuthenticator() {
             // @Override
             public boolean authenticate(
                     String username, PublicKey key, ServerSession session) {
-                return true;
+                return false;
             }
         });
         endpoint.setForwardingFilter(new ForwardingFilter() {
@@ -206,7 +237,13 @@ public class SftpProtocol implements ProtocolHandler {
         endpoint.setFileSystemFactory(new FileSystemFactory() {
             public FileSystemView createFileSystemView(Session session)
                     throws IOException {
-                return new SftpServletFileSystemView(SftpProtocol.this, session.getUsername());
+                String username = session.getUsername();
+                if (anonymousUsername.equals(username)) {
+                    username = "";
+                }
+                
+                return new SftpServletFileSystemView(
+                    SftpProtocol.this, username);
             }
         });
         endpoint.setSubsystemFactories(
