@@ -116,14 +116,14 @@ public class SftpProtocol implements ProtocolHandler {
      * 
      * @param path request path.
      * @param method request method.
-     * @param userName request user name.
+     * @param session the current SSH session.
      * @param headers request headers.
      * @param inputBuffer PUT/POST contents.
      * @param outputBuffer response contents.
      * @return response objects (containing header information).
      */
     Response service(
-            URI path, String method, String userName,
+            URI path, String method, Session session,
             Map<String,String> headers,
             InputBuffer inputBuffer, OutputBuffer outputBuffer) {
         Request request = new Request();
@@ -140,7 +140,13 @@ public class SftpProtocol implements ProtocolHandler {
         request.protocol().setString("SFTP");
         request.method().setString(method);
         request.requestURI().setString(path.normalize().toString());
-        request.getRemoteUser().setString(userName);
+        if (session != null) {
+            String username = session.getUsername();
+            if (anonymousUsername.equals(username)) {
+                username = "";
+            }
+            request.getRemoteUser().setString(username);
+        }
         if (headers != null) {
             MimeHeaders reqHeaders = request.getMimeHeaders();
             for (Map.Entry<String,String> header : headers.entrySet()) {
@@ -157,8 +163,7 @@ public class SftpProtocol implements ProtocolHandler {
             adapter.service(request, response);
         } catch (Exception e) {
             throw new RuntimeException(
-                "An error occurred when " +
-                userName + " requested " + path,
+                "An error occurred requesting " + path,
                 e);
         }
         
@@ -237,13 +242,8 @@ public class SftpProtocol implements ProtocolHandler {
         endpoint.setFileSystemFactory(new FileSystemFactory() {
             public FileSystemView createFileSystemView(Session session)
                     throws IOException {
-                String username = session.getUsername();
-                if (anonymousUsername.equals(username)) {
-                    username = "";
-                }
-                
                 return new SftpServletFileSystemView(
-                    SftpProtocol.this, username);
+                    SftpProtocol.this, session);
             }
         });
         endpoint.setSubsystemFactories(
