@@ -11,6 +11,10 @@ repositories {
     mavenCentral()
 }
 
+configurations {
+    dist
+}
+
 dependencies {
     ext.SLF4J_VERSION = '1.6.+'
     ext.TOMCAT_VERSION = '7.0.+'
@@ -28,15 +32,24 @@ dependencies {
     testCompile(
         "junit:junit:4.+",
     )
+    dist(
+        "org.apache.sshd:sshd-core:0.7.+",
+        "org.slf4j:slf4j-jdk14:${SLF4J_VERSION}",
+    )
 }
 
-task runTestServer(type: JavaExec, depends: classes) {
+task runTestServer(type: JavaExec, dependsOn: classes) {
     main = 'org.apache.catalina.startup.Bootstrap'
     args 'start'
     workingDir = project.projectDir.absolutePath + '/testServer'
     classpath configurations.runtime
     classpath sourceSets.main.output.classesDir
     classpath sourceSets.main.output.resourcesDir
+}
+
+task distZip(type: Zip, dependsOn: jar) {
+    from jar.archivePath
+    from configurations.dist
 }
 
 task wrapper(type: Wrapper)
