@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.net.HttpCookie;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.security.PublicKey;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -59,7 +58,6 @@ import org.apache.sshd.server.FileSystemFactory;
 import org.apache.sshd.server.FileSystemView;
 import org.apache.sshd.server.ForwardingFilter;
 import org.apache.sshd.server.PasswordAuthenticator;
-import org.apache.sshd.server.PublickeyAuthenticator;
 import org.apache.sshd.server.ServerFactoryManager;
 import org.apache.sshd.server.keyprovider.PEMGeneratorHostKeyProvider;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
@@ -322,13 +320,6 @@ public class SftpProtocol implements ProtocolHandler {
                 }
                 
                 return authenticated;
-            }
-        });
-        endpoint.setPublickeyAuthenticator(new PublickeyAuthenticator() {
-            // @Override
-            public boolean authenticate(
-                    String username, PublicKey key, ServerSession session) {
-                return false;
             }
         });
         endpoint.setForwardingFilter(new ForwardingFilter() {
