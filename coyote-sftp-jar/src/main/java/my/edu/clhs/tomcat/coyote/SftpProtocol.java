@@ -241,10 +241,9 @@ public class SftpProtocol implements ProtocolHandler {
         request.requestURI().setString(normalizedPath);
         if (session != null) {
             String username = session.getUsername();
-            if (anonymousUsername.equals(username)) {
-                username = "";
+            if (!anonymousUsername.equals(username)) {
+                request.getRemoteUser().setString(username);
             }
-            request.getRemoteUser().setString(username);
         }
         MimeHeaders reqHeaders = request.getMimeHeaders();
         if (headers != null) {
