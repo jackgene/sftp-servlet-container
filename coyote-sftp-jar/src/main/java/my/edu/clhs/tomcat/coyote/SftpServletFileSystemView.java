@@ -47,6 +47,7 @@ import org.apache.coyote.Request;
 import org.apache.coyote.Response;
 import org.apache.coyote.http11.Constants;
 import org.apache.coyote.http11.filters.VoidOutputFilter;
+import org.apache.sshd.common.Session;
 import org.apache.sshd.server.FileSystemView;
 import org.apache.sshd.server.SshFile;
 import org.apache.tomcat.util.buf.ByteChunk;
@@ -58,11 +59,11 @@ class SftpServletFileSystemView implements FileSystemView {
     private static final int SC_MULTI_STATUS = 207;
     
     private final SftpProtocol protocol;
-    private final String userName;
+    private final Session session;
     
-    SftpServletFileSystemView(SftpProtocol sftpProtocol, String userName) {
+    SftpServletFileSystemView(SftpProtocol sftpProtocol, Session session) {
         protocol = sftpProtocol;
-        this.userName = userName;
+        this.session = session;
     }
     
     private static final String PROPFIND_ALLPROP_BODY =
@@ -101,7 +102,7 @@ class SftpServletFileSystemView implements FileSystemView {
         Map<String,String> propFindHeaders = new HashMap<String,String>();
         propFindHeaders.put("Depth", Integer.toString(depth));
         Response response = protocol.service(
-            URI.create(absolutePath), "PROPFIND", userName, propFindHeaders,
+            URI.create(absolutePath), "PROPFIND", session, propFindHeaders,
             propFindBuf, webDavBuf);
         int status = response.getStatus();
         
@@ -187,7 +188,7 @@ class SftpServletFileSystemView implements FileSystemView {
             }
         } catch (DavProcessingException e) {
             Response response = protocol.service(
-                URI.create(absolutePath), Constants.HEAD, userName,
+                URI.create(absolutePath), Constants.HEAD, session,
                 Collections.<String,String>emptyMap(),
                 null, new VoidOutputFilter());
             
@@ -218,7 +219,7 @@ class SftpServletFileSystemView implements FileSystemView {
     
     public boolean deleteFile(String absolutePath) {
         Response response = protocol.service(
-            URI.create(absolutePath), "DELETE", userName,
+            URI.create(absolutePath), "DELETE", session,
             Collections.<String,String>emptyMap(),
             null, new VoidOutputFilter());
         
@@ -227,7 +228,7 @@ class SftpServletFileSystemView implements FileSystemView {
     
     public boolean createDirectory(String absolutePath) {
         Response response = protocol.service(
-            URI.create(absolutePath), "MKCOL", userName,
+            URI.create(absolutePath), "MKCOL", session,
             Collections.<String,String>emptyMap(),
             null, new VoidOutputFilter());
         
@@ -273,7 +274,7 @@ class SftpServletFileSystemView implements FileSystemView {
                     }
                 };
                 protocol.service(
-                    URI.create(absolutePath), "PUT", userName,
+                    URI.create(absolutePath), "PUT", session,
                     Collections.<String,String>emptyMap(),
                     inputBuffer, new VoidOutputFilter());
             }
@@ -309,7 +310,7 @@ class SftpServletFileSystemView implements FileSystemView {
                 
                 try {
                     protocol.service(
-                        URI.create(absolutePath), Constants.GET, userName,
+                        URI.create(absolutePath), Constants.GET, session,
                         Collections.<String,String>emptyMap(),
                         null, outputBuffer);
                 } finally {
