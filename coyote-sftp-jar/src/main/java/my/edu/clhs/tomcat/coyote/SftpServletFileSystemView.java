@@ -18,8 +18,8 @@
 package my.edu.clhs.tomcat.coyote;
 
 import static javax.servlet.http.HttpServletResponse.SC_CREATED;
-import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
 import static javax.servlet.http.HttpServletResponse.SC_NOT_FOUND;
+import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 import java.io.ByteArrayInputStream;
@@ -46,7 +46,6 @@ import org.apache.coyote.OutputBuffer;
 import org.apache.coyote.Request;
 import org.apache.coyote.Response;
 import org.apache.coyote.http11.Constants;
-import org.apache.coyote.http11.filters.VoidOutputFilter;
 import org.apache.sshd.server.FileSystemView;
 import org.apache.sshd.server.SshFile;
 import org.apache.tomcat.util.buf.ByteChunk;
@@ -188,8 +187,7 @@ class SftpServletFileSystemView implements FileSystemView {
         } catch (DavProcessingException e) {
             Response response = protocol.service(
                 URI.create(absolutePath), Constants.HEAD, userName,
-                Collections.<String,String>emptyMap(),
-                null, new VoidOutputFilter());
+                Collections.<String,String>emptyMap(), null, null);
             
             boolean isFile = response.getStatus() == SC_OK;
             if (!isFile && absolutePath.endsWith("/README.txt")) {
@@ -219,8 +217,7 @@ class SftpServletFileSystemView implements FileSystemView {
     public boolean deleteFile(String absolutePath) {
         Response response = protocol.service(
             URI.create(absolutePath), "DELETE", userName,
-            Collections.<String,String>emptyMap(),
-            null, new VoidOutputFilter());
+            Collections.<String,String>emptyMap(), null, null);
         
         return response.getStatus() == SC_NO_CONTENT;
     }
@@ -228,8 +225,7 @@ class SftpServletFileSystemView implements FileSystemView {
     public boolean createDirectory(String absolutePath) {
         Response response = protocol.service(
             URI.create(absolutePath), "MKCOL", userName,
-            Collections.<String,String>emptyMap(),
-            null, new VoidOutputFilter());
+            Collections.<String,String>emptyMap(), null, null);
         
         return response.getStatus() == SC_CREATED;
     }
@@ -275,7 +271,7 @@ class SftpServletFileSystemView implements FileSystemView {
                 protocol.service(
                     URI.create(absolutePath), "PUT", userName,
                     Collections.<String,String>emptyMap(),
-                    inputBuffer, new VoidOutputFilter());
+                    inputBuffer, null);
             }
         }).start();
         
