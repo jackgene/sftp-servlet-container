@@ -1,5 +1,5 @@
 /*
- * SftpServletSshFile.java
+ * ServletResourceSshFile.java
  *
  * Copyright 2011-2012 Jack Leow
  *
