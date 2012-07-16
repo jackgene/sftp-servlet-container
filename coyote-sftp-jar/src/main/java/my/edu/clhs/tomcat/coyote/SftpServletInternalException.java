@@ -1,5 +1,5 @@
 /*
- * SftpServletException.java
+ * SftpServletInternalException.java
  *
  * Copyright 2011-2012 Jack Leow
  *
