@@ -1,8 +1,11 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
 
-sourceCompatibility = 1.5
+sourceCompatibility = 1.6 // TODO boot class path
 version = '0.0-SNAPSHOT'
+
+defaultTasks 'clean', 'distZip'
+
 jar {
     baseName = 'coyote-sftp'
 }
@@ -48,8 +51,17 @@ task runTestServer(type: JavaExec, dependsOn: classes) {
 }
 
 task distZip(type: Zip, dependsOn: jar) {
-    from jar.archivePath
-    from configurations.dist
+    baseName = 'coyote-sftp'
+    
+    from 'LICENSE'
+    from 'NOTICE'
+    from 'src/main/documentation'
+    
+    into('/copy-to-tomcat-lib') {
+        from jar.archivePath 
+        from configurations.dist into '/copy-to-tomcat-lib'
+    }
+    // TODO include docs
 }
 
 task wrapper(type: Wrapper)
