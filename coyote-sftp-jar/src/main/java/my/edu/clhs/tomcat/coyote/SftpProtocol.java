@@ -32,12 +32,15 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Executor;
 
+import javax.management.ObjectName;
+
 import org.apache.catalina.Context;
 import org.apache.catalina.Manager;
 import org.apache.catalina.Realm;
 import org.apache.catalina.connector.CoyoteAdapter;
 import org.apache.catalina.realm.NullRealm;
 import org.apache.coyote.Adapter;
+import org.apache.coyote.Constants;
 import org.apache.coyote.InputBuffer;
 import org.apache.coyote.OutputBuffer;
 import org.apache.coyote.ProtocolHandler;
@@ -65,6 +68,7 @@ import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.sftp.SftpSubsystem;
 import org.apache.tomcat.util.http.MimeHeaders;
 import org.apache.tomcat.util.http.mapper.MappingData;
+import org.apache.tomcat.util.res.StringManager;
 
 /**
  * {@link ProtocolHandler} for the SSH File Transfer Protocol.
@@ -73,6 +77,8 @@ import org.apache.tomcat.util.http.mapper.MappingData;
  */
 public class SftpProtocol implements ProtocolHandler {
     private static final Log log = LogFactory.getLog(SftpProtocol.class);
+    private static final StringManager sm =
+        StringManager.getManager(Constants.Package);
     private static final AttributeKey<Set<org.apache.catalina.Session>>
         SESSIONS_KEY = new AttributeKey<Set<org.apache.catalina.Session>>();
     private static final AttributeKey<Set<HttpCookie>> COOKIES_KEY =
@@ -284,8 +290,23 @@ public class SftpProtocol implements ProtocolHandler {
         return response;
     }
     
+    private String getName() {
+        StringBuilder name = new StringBuilder("sftp");
+        name.append('-');
+        String host = getHost();
+        if (host != null) {
+            name.append(host);
+            name.append('-');
+        }
+        name.append(getPort());
+        return ObjectName.quote(name.toString());
+    }
+    
     // @Override - ProtocolHandler
     public void init() throws Exception {
+        if (log.isInfoEnabled()) {
+            log.info(sm.getString("abstractProtocolHandler.init", getName()));
+        }
         if (SecurityUtils.isBouncyCastleRegistered()) {
             endpoint.setKeyPairProvider(
                 new PEMGeneratorHostKeyProvider("key.pem"));
@@ -404,31 +425,82 @@ public class SftpProtocol implements ProtocolHandler {
     
     // @Override - ProtocolHandler
     public void start() throws Exception {
-        String listenHost = getHost();
-        log.info(
-            "Starting Coyote SFTP/ssh-2.0 on /" +
-            (listenHost != null ? listenHost : "0.0.0.0") + ":" +
-            getPort());
-        endpoint.start();
+        if (log.isInfoEnabled()) {
+            log.info(sm.getString("abstractProtocolHandler.start", getName()));
+        }
+        try {
+            endpoint.start();
+        } catch (Exception e) {
+            log.error(
+                sm.getString("abstractProtocolHandler.startError", getName()),
+                e
+            );
+            throw e;
+        }
     }
     
     // @Override - ProtocolHandler
     public void pause() throws Exception {
-        endpoint.stop();
+        if (log.isInfoEnabled()) {
+            log.info(sm.getString("abstractProtocolHandler.pause", getName()));
+        }
+        try {
+            endpoint.stop();
+        } catch (Exception e) {
+            log.error(
+                sm.getString("abstractProtocolHandler.pauseError", getName()),
+                e
+            );
+            throw e;
+        }
     }
     
     // @Override - ProtocolHandler
     public void resume() throws Exception {
-        endpoint.start();
+        if (log.isInfoEnabled()) {
+            log.info(sm.getString("abstractProtocolHandler.resume", getName()));
+        }
+        try {
+            endpoint.start();
+        } catch (Exception e) {
+            log.error(
+                sm.getString("abstractProtocolHandler.resumeError", getName()),
+                e
+            );
+            throw e;
+        }
     }
     
     // @Override - ProtocolHandler
     public void stop() throws Exception {
-        endpoint.stop();
-    }
+        if (log.isInfoEnabled()) {
+            log.info(sm.getString("abstractProtocolHandler.stop", getName()));
+        }
+        try {
+            endpoint.stop();
+        } catch (Exception e) {
+            log.error(
+                sm.getString("abstractProtocolHandler.stopError", getName()),
+                e
+            );
+            throw e;
+        }
+   }
     
     // @Override - ProtocolHandler
     public void destroy() throws Exception {
-        endpoint.stop(true);
+        if (log.isInfoEnabled()) {
+            log.info(
+                sm.getString("abstractProtocolHandler.destroy", getName()));
+        }
+        try {
+            endpoint.stop(true);
+        } catch (Exception e) {
+            log.error(
+                sm.getString("abstractProtocolHandler.destroyError", getName()),
+                e
+            );
+            throw e;
+        }
     }
 }
