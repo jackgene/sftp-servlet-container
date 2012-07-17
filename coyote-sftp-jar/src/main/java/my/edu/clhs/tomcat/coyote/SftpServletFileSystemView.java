@@ -30,7 +30,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -100,7 +99,7 @@ class SftpServletFileSystemView implements FileSystemView {
         Map<String,String> propFindHeaders = new HashMap<String,String>();
         propFindHeaders.put("Depth", Integer.toString(depth));
         Response response = protocol.service(
-            URI.create(absolutePath), "PROPFIND", session, propFindHeaders,
+            absolutePath, "PROPFIND", session, propFindHeaders,
             propFindBuf, webDavBuf);
         int status = response.getStatus();
         
@@ -186,8 +185,7 @@ class SftpServletFileSystemView implements FileSystemView {
             }
         } catch (DavProcessingException e) {
             Response response = protocol.service(
-                URI.create(absolutePath), Constants.HEAD, session,
-                null, null, null);
+                absolutePath, Constants.HEAD, session, null, null, null);
             
             boolean isFile = response.getStatus() == SC_OK;
             if (!isFile && absolutePath.endsWith("/README.txt")) {
@@ -216,14 +214,14 @@ class SftpServletFileSystemView implements FileSystemView {
     
     public boolean deleteFile(String absolutePath) {
         Response response = protocol.service(
-            URI.create(absolutePath), "DELETE", session, null, null, null);
+            absolutePath, "DELETE", session, null, null, null);
         
         return response.getStatus() == SC_NO_CONTENT;
     }
     
     public boolean createDirectory(String absolutePath) {
         Response response = protocol.service(
-            URI.create(absolutePath), "MKCOL", session, null, null, null);
+            absolutePath, "MKCOL", session, null, null, null);
         
         return response.getStatus() == SC_CREATED;
     }
@@ -267,8 +265,7 @@ class SftpServletFileSystemView implements FileSystemView {
                     }
                 };
                 protocol.service(
-                    URI.create(absolutePath), "PUT", session,
-                    null, inputBuffer, null);
+                    absolutePath, "PUT", session, null, inputBuffer, null);
             }
         }).start();
         
@@ -302,7 +299,7 @@ class SftpServletFileSystemView implements FileSystemView {
                 
                 try {
                     protocol.service(
-                        URI.create(absolutePath), Constants.GET, session,
+                        absolutePath, Constants.GET, session,
                         null, null, outputBuffer);
                 } finally {
                     try {

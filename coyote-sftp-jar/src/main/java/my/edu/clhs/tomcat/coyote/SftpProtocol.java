@@ -17,10 +17,11 @@
  */
 package my.edu.clhs.tomcat.coyote;
 
+import java.io.File;
+import java.io.IOError;
 import java.io.IOException;
 import java.net.HttpCookie;
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -225,7 +226,7 @@ public class SftpProtocol implements ProtocolHandler {
      * @return response objects (containing header information).
      */
     Response service(
-            URI path, String method, Session session,
+            String path, String method, Session session,
             Map<String,String> headers,
             InputBuffer inputBuffer, OutputBuffer outputBuffer) {
         Request request = new Request();
@@ -241,7 +242,14 @@ public class SftpProtocol implements ProtocolHandler {
         request.serverName().setString(endpoint.getHost());
         request.protocol().setString("SFTP");
         request.method().setString(method);
-        String normalizedPath = path.normalize().toString();
+        String normalizedPath;
+        try {
+            normalizedPath = new File(path).getCanonicalPath();
+        } catch (IOException e) {
+            // By the time we get here, the path should have been validated
+            // so this should really never happen.
+            throw new IOError(e);
+        }
         request.requestURI().setString(normalizedPath);
         if (session != null) {
             String username = session.getUsername();
@@ -328,7 +336,7 @@ public class SftpProtocol implements ProtocolHandler {
                     // possible, just make a cheap request
                     // TODO see if there are other ways to get access of Realm
                     Response response = service(
-                        URI.create("/"), "FAKEVERB", null, null, null, null);
+                        "/", "FAKEVERB", null, null, null, null);
                     
                     org.apache.catalina.connector.Request servletReq =
                         (org.apache.catalina.connector.Request)response.
