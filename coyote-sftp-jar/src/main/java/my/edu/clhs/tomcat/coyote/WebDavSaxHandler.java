@@ -18,6 +18,8 @@
 package my.edu.clhs.tomcat.coyote;
 
 import java.io.File;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -140,7 +142,14 @@ class WebDavSaxHandler extends DefaultHandler {
                     if (context.shouldDiscard(path)) {
                         return DISCARD;
                     }
-                    context.fileBuilder.path(context.charBuffer.toString());
+                    String href = context.charBuffer.toString();
+                    try {
+                        // TODO should I hardcode the character encoding?
+                        href = URLDecoder.decode(href, "UTF-8");
+                    } catch (UnsupportedEncodingException e) {
+                        // do nothing
+                    }
+                    context.fileBuilder.path(href);
                     return RESPONSE;
                 }
                 return super.endElement(context, uri, localName, qName);
