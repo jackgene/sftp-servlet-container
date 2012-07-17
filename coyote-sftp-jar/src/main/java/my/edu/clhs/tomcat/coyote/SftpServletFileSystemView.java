@@ -209,7 +209,7 @@ class SftpServletFileSystemView implements FileSystemView {
     
     // @Override
     public SshFile getFile(SshFile baseDir, String file) {
-        throw new UnsupportedOperationException();
+        return getFile(baseDir.getAbsolutePath() + "/" + file);
     }
     
     public boolean deleteFile(String absolutePath) {
