@@ -84,7 +84,8 @@ class WebDavSaxHandler extends DefaultHandler {
                 if (NAMESPACE_URI.equals(uri) &&
                         "response".equals(localName)) {
                     context.fileBuilder =
-                        new ServletResourceSshFile.Builder(context.fileSystemView);
+                        new ServletResourceSshFile.Builder(
+                        context.fileSystemView);
                     return RESPONSE;
                 }
                 return super.startElement(
