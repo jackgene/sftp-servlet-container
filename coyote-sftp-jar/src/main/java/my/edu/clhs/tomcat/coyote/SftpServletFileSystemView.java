@@ -158,6 +158,7 @@ class SftpServletFileSystemView implements FileSystemView {
             (path == null || path.equals(".")) ? "/" : path;
         
         try {
+            // If DAV is supported use DAV response
             InputStream responseXml = propFindResponseXmlBody(absolutePath, 0);
             if (responseXml != null) {
                 List<? extends SshFile> files =
@@ -184,22 +185,36 @@ class SftpServletFileSystemView implements FileSystemView {
                     build();
             }
         } catch (DavProcessingException e) {
-            Response response = protocol.service(
-                absolutePath, Constants.HEAD, session, null, null, null);
-            
-            boolean isFile = response.getStatus() == SC_OK;
-            if (!isFile && absolutePath.endsWith("/README.txt")) {
-                sshFile = new ClassPathResourceSshFile(
-                    absolutePath, "README.txt");
+            // If DAV isn't supported...
+            if (!absolutePath.endsWith("/")) {
+                // If the the requested URI does not end with a /
+                Response response = protocol.service(
+                    absolutePath, Constants.HEAD, session, null, null, null);
+                
+                boolean isFile = response.getStatus() == SC_OK;
+                if (!isFile && absolutePath.endsWith("/README.txt")) {
+                    // If the path name is README.txt and is not a real resource
+                    sshFile = new ClassPathResourceSshFile(
+                        absolutePath, "README.txt");
+                } else {
+                    // If the path represents a real resource or
+                    // it does not, but is not README.txt
+                    sshFile = new ServletResourceSshFile.Builder(this).
+                        path(absolutePath).
+                        isFile(isFile).
+                        isDirectory(!isFile).
+                        size(response.getContentLengthLong()).
+                        lastModifiedRfc1123(
+                            response.getMimeHeaders().getHeader("Last-Modified")
+                        ).
+                        build();
+                }
             } else {
+                // If the the requested URI ends with a /
                 sshFile = new ServletResourceSshFile.Builder(this).
                     path(absolutePath).
-                    isFile(isFile).
-                    isDirectory(!isFile).
-                    size(response.getContentLengthLong()).
-                    lastModifiedRfc1123(
-                        response.getMimeHeaders().getHeader("Last-Modified")
-                    ).
+                    isFile(false).
+                    isDirectory(true).
                     build();
             }
         }
