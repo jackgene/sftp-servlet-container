@@ -52,6 +52,7 @@ import org.xml.sax.SAXException;
 
 class SftpServletFileSystemView implements FileSystemView {
     public static final String DEFAULT_FILE_OWNER = "nobody";
+    public static final String HELP_FILENAME = "THIS_IS_NOT_A_FILESYSTEM.txt";
     
     private static final int SC_MULTI_STATUS = 207;
     
@@ -186,26 +187,28 @@ class SftpServletFileSystemView implements FileSystemView {
             }
         } catch (DavProcessingException e) {
             // If DAV isn't supported...
-            if (!absolutePath.endsWith("/")) {
+            if (!absolutePath.endsWith("/") && !absolutePath.endsWith("..")) {
                 // If the the requested URI does not end with a /
                 Response response = protocol.service(
                     absolutePath, Constants.HEAD, session, null, null, null);
                 
                 boolean isFile = response.getStatus() == SC_OK;
-                if (!isFile && absolutePath.endsWith("/README.txt")) {
-                    // If the path name is README.txt and is not a real resource
+                if (!isFile && absolutePath.endsWith("/" + HELP_FILENAME)) {
+                    // If the path name is HELP_FILENAME and
+                    // is not a real resource
                     sshFile = new ClassPathResourceSshFile(
-                        absolutePath, "README.txt");
+                        absolutePath, HELP_FILENAME);
                 } else {
                     // If the path represents a real resource or
-                    // it does not, but is not README.txt
+                    // it does not, but is not HELP_FILENAME
                     sshFile = new ServletResourceSshFile.Builder(this).
                         path(absolutePath).
                         isFile(isFile).
                         isDirectory(!isFile).
                         size(response.getContentLengthLong()).
                         lastModifiedRfc1123(
-                            response.getMimeHeaders().getHeader("Last-Modified")
+                            response.getMimeHeaders().
+                            getHeader("Last-Modified")
                         ).
                         build();
                 }
@@ -254,7 +257,7 @@ class SftpServletFileSystemView implements FileSystemView {
         } catch (DavProcessingException e) {
             directoryContents.add(
                 new ClassPathResourceSshFile(
-                    absolutePath + "/README.txt", "README.txt"
+                    absolutePath + "/" + HELP_FILENAME, HELP_FILENAME
                 )
             );
         }
