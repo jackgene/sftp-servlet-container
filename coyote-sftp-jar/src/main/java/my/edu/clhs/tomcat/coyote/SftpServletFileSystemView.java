@@ -52,7 +52,7 @@ import org.xml.sax.SAXException;
 
 class SftpServletFileSystemView implements FileSystemView {
     public static final String DEFAULT_FILE_OWNER = "nobody";
-    public static final String HELP_FILENAME = "THIS_IS_NOT_A_FILESYSTEM.txt";
+    public static final String HELP_FILENAME = "WHERE_ARE_MY_FILES.txt";
     
     private static final int SC_MULTI_STATUS = 207;
     
