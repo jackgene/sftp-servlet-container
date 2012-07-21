@@ -7,7 +7,8 @@ supports the HTTP WebDAV extensions.
 If the web application does not support WebDAV extensions (this is typical):
  - Files paths are mapped to Servlet resource URIs.
  
- - File operations are translated to Servlet requests in the following manner:
+ - The following table describes how SFTP commands are translated into Servlet
+   requests:
     SFTP command            Servlet request method
     get                     GET
     put                     PUT
@@ -37,7 +38,7 @@ If the web application does not support WebDAV extensions (this is typical):
  - You can access resources in a directory using the full path, or by
    navigating into the directory using "cd" first.
    E.g.,
-   To access "/foo/bar.gif" you can:
+   To access "/foo/bar.gif" you can do:
     sftp> get /foo/bar.gif
    or:
     sftp> cd /foo
@@ -55,14 +56,14 @@ If the web application does not support WebDAV extensions (this is typical):
     sftp> get /baz/.
   
    and this is how you would list its directory contents:
-    sftp> cd /baz/
+    sftp> ls /baz/
    
    One special case is the root directory, if it's both a file and directory,
    this is how you would access its file contents:
      sftp> get /.
    
    and this is how you would list its directory contents:
-    sftp> cd /
+    sftp> ls /
  
  - The following commands are not supported:
      chgrp
