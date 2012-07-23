@@ -227,7 +227,7 @@ public class SftpProtocol implements ProtocolHandler {
      * @return response objects (containing header information).
      */
     Response service(
-            String path, String method, Session session,
+            String uri, String method, Session session,
             Map<String,String> headers,
             InputBuffer inputBuffer, OutputBuffer outputBuffer) {
         Request request = new Request();
@@ -245,13 +245,17 @@ public class SftpProtocol implements ProtocolHandler {
         request.method().setString(method);
         String normalizedPath;
         try {
-            normalizedPath = new File(path).getCanonicalPath();
+            String[] uriComponents = uri.split("\\?", 2);
+            normalizedPath = new File(uriComponents[0]).getCanonicalPath();
+            request.requestURI().setString(normalizedPath);
+            if (uriComponents.length > 1) {
+                request.queryString().setString(uriComponents[1]);
+            }
         } catch (IOException e) {
             // By the time we get here, the path should have been validated
             // so this should really never happen.
             throw new IOError(e);
         }
-        request.requestURI().setString(normalizedPath);
         if (session != null) {
             String username = session.getUsername();
             if (!anonymousUsername.equals(username)) {
@@ -278,7 +282,7 @@ public class SftpProtocol implements ProtocolHandler {
             adapter.service(request, response);
         } catch (Exception e) {
             throw new RuntimeException(
-                "An error occurred requesting " + path,
+                "An error occurred requesting " + uri,
                 e);
         }
         if (session != null) {
