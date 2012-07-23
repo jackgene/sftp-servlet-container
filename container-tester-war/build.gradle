@@ -1,0 +1,20 @@
+apply plugin: 'war'
+apply plugin: 'eclipse-wtp'
+
+sourceCompatibility = 1.5
+version = '0.0-SNAPSHOT'
+war {
+    baseName = 'test-container'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    providedCompile(
+        [group: 'javax.servlet', name: 'servlet-api', version: '2.4'],
+    )
+}
+
+task wrapper(type: Wrapper)
