@@ -287,6 +287,7 @@ public class SftpProtocol implements ProtocolHandler {
         }
         if (session != null) {
             for (String cookieHeader : extractCookieHeaders(response)) {
+                cookieHeader = cookieHeader.replaceAll(";\\s*HttpOnly", "");
                 for (HttpCookie cookie : HttpCookie.parse(cookieHeader)) {
                     addCookieTo(session, cookie);
                     if ("JSESSIONID".equals(cookie.getName())) {
