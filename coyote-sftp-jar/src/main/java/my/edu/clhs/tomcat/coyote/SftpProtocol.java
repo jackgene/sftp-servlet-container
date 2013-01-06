@@ -51,11 +51,13 @@ import org.apache.coyote.Response;
 import org.apache.coyote.http11.filters.VoidOutputFilter;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
+import org.apache.mina.core.session.IoSession;
 import org.apache.sshd.SshServer;
 import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.common.Session;
 import org.apache.sshd.common.Session.AttributeKey;
 import org.apache.sshd.common.SessionListener;
+import org.apache.sshd.common.session.AbstractSession;
 import org.apache.sshd.common.util.SecurityUtils;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.FileSystemFactory;
@@ -260,6 +262,17 @@ public class SftpProtocol implements ProtocolHandler {
             String username = session.getUsername();
             if (!anonymousUsername.equals(username)) {
                 request.getRemoteUser().setString(username);
+            }
+            if (session instanceof AbstractSession) {
+                IoSession ioSession = ((AbstractSession)session).getIoSession();
+                InetSocketAddress remoteAddr =
+                    (InetSocketAddress)ioSession.getRemoteAddress();
+                request.remoteAddr().setString(
+                    remoteAddr.getAddress().getHostAddress()
+                );
+                request.remoteHost().setString(
+                    remoteAddr.getHostString()
+                );
             }
         }
         MimeHeaders reqHeaders = request.getMimeHeaders();
