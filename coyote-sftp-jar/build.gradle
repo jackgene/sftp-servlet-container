@@ -12,69 +12,69 @@ compileJava.options.bootClasspath = getProperty('dependencies.JDK6_CORE_LIB')
 defaultTasks 'clean', 'distZip'
 
 jar {
-    baseName = 'coyote-sftp'
+  baseName = 'coyote-sftp'
 }
 
 repositories {
-    mavenCentral()
+  mavenCentral()
 }
 
 configurations {
-    // Compile-time dependency not included in the distribution
-    providedCompile
+  // Compile-time dependency not included in the distribution
+  providedCompile
 }
 
 dependencies {
-    ext.SLF4J_VERSION = '1.6.+'
-    ext.TOMCAT_VERSION = '7.0.+'
-    
-    compile(
-        "org.apache.sshd:sshd-core:0.7.+",
-        "org.slf4j:slf4j-api:${SLF4J_VERSION}",
-    )
-    providedCompile(
-        "org.apache.tomcat:tomcat-catalina:${TOMCAT_VERSION}",
-        "org.apache.tomcat:tomcat-coyote:${TOMCAT_VERSION}",
-    )
-    runtime(
-        "org.slf4j:slf4j-jdk14:${SLF4J_VERSION}",
-    )
-    testCompile(
-        "junit:junit:4.+",
-    )
-    testRuntime(
-        "org.apache.tomcat:tomcat-jasper:${TOMCAT_VERSION}",
-    )
+  ext.SLF4J_VERSION = '1.6.+'
+  ext.TOMCAT_VERSION = '7.0.+'
+  
+  compile(
+    "org.apache.sshd:sshd-core:0.7.+",
+    "org.slf4j:slf4j-api:${SLF4J_VERSION}",
+  )
+  providedCompile(
+    "org.apache.tomcat:tomcat-catalina:${TOMCAT_VERSION}",
+    "org.apache.tomcat:tomcat-coyote:${TOMCAT_VERSION}",
+  )
+  runtime(
+    "org.slf4j:slf4j-jdk14:${SLF4J_VERSION}",
+  )
+  testCompile(
+    "junit:junit:4.+",
+  )
+  testRuntime(
+    "org.apache.tomcat:tomcat-jasper:${TOMCAT_VERSION}",
+  )
 }
 sourceSets.main.compileClasspath += configurations.providedCompile
 
 eclipse {
-    classpath {
-        plusConfigurations += configurations.providedCompile
-    }
+  classpath {
+    plusConfigurations += configurations.providedCompile
+  }
 }
 
 task runTestServer(type: JavaExec, dependsOn: classes) {
-    main = 'org.apache.catalina.startup.Bootstrap'
-    args 'start'
-    workingDir = project.projectDir.absolutePath + '/testServer'
-    classpath configurations.testRuntime
-    classpath configurations.providedCompile
-    classpath sourceSets.main.output.classesDir
-    classpath sourceSets.main.output.resourcesDir
+  main = 'org.apache.catalina.startup.Bootstrap'
+  args 'start'
+  workingDir = project.projectDir.absolutePath + '/testServer'
+  classpath configurations.testRuntime
+  classpath configurations.providedCompile
+  classpath sourceSets.main.output.classesDir
+  classpath sourceSets.main.output.resourcesDir
 }
 
 task distZip(type: Zip, dependsOn: jar) {
-    baseName = 'coyote-sftp'
-    
-    from 'LICENSE'
-    from 'NOTICE'
-    from 'src/main/documentation'
-    
-    into('/copy-to-tomcat-lib') {
-        from jar.archivePath 
-        from configurations.runtime into '/copy-to-tomcat-lib'
-    }
+  baseName = 'coyote-sftp'
+  
+  from 'LICENSE'
+  from 'NOTICE'
+  from 'src/main/documentation'
+  
+  into('/copy-to-tomcat-lib') {
+    from jar.archivePath 
+    from configurations.runtime into '/copy-to-tomcat-lib'
+  }
 }
 
 task wrapper(type: Wrapper)
