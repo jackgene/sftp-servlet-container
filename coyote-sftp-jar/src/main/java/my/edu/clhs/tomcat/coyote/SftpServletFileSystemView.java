@@ -30,6 +30,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -64,21 +65,38 @@ class SftpServletFileSystemView implements FileSystemView {
         this.session = session;
     }
     
-    private static final String PROPFIND_ALLPROP_BODY =
-        "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" +
-        "<D:propfind xmlns:D=\"DAV:\">" +
-            "<D:allprop/>" +
-        "</D:propfind>";
+    private static final byte[] PROPFIND_ALLPROP_BODY;
+    static {
+        try {
+            PROPFIND_ALLPROP_BODY= (
+                "<?xml version=\"1.0\" encoding=\"US-ASCII\" ?>\n" +
+                "<D:propfind xmlns:D=\"DAV:\">" +
+                    "<D:allprop/>" +
+                "</D:propfind>"
+            ).getBytes("US-ASCII");
+        } catch (UnsupportedEncodingException e) {
+            // This should never happen
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+    
     private InputStream propFindResponseXmlBody(String absolutePath, int depth)
             throws DavProcessingException {
         InputBuffer propFindBuf = new InputBuffer() {
+            private boolean read = false;
+            
+            // @Override
             public int doRead(ByteChunk chunk, Request request)
                     throws IOException {
-                int len = PROPFIND_ALLPROP_BODY.length();
-                
-                chunk.setBytes(
-                    PROPFIND_ALLPROP_BODY.getBytes(chunk.getCharset()), 0, len);
-                return len;
+                if (!read) {
+                    int len = PROPFIND_ALLPROP_BODY.length;
+                    
+                    chunk.setBytes(PROPFIND_ALLPROP_BODY, 0, len);
+                    read = true;
+                    return len;
+                } else {
+                    return -1;
+                }
             }
         };
         final ByteChunk webDavChunk = new ByteChunk();
