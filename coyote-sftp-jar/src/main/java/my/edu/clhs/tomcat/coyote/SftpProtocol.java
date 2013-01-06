@@ -271,7 +271,7 @@ public class SftpProtocol implements ProtocolHandler {
                     remoteAddr.getAddress().getHostAddress()
                 );
                 request.remoteHost().setString(
-                    remoteAddr.getHostString()
+                    remoteAddr.getHostName()
                 );
             }
         }
