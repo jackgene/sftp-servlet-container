@@ -1,8 +1,13 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
 
-sourceCompatibility = 1.6 // TODO boot class path
 version = '0.0-SNAPSHOT'
+sourceCompatibility = 1.6
+// Add dependencies.JDK6_CORE_LIB property to ~/.gradle/gradle.properties
+// referencing core libraries jar (rt.jar or classes.jar)
+// e.g.,
+// dependencies.JDK6_CORE_LIB=<path to classes.jar>
+compileJava.options.bootClasspath = getProperty('dependencies.JDK6_CORE_LIB')
 
 defaultTasks 'clean', 'distZip'
 
