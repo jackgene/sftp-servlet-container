@@ -27,6 +27,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
+import javax.xml.bind.DatatypeConverter;
+
 import org.apache.sshd.server.SshFile;
 
 class ServletResourceSshFile implements SshFile {
@@ -168,20 +170,27 @@ class ServletResourceSshFile implements SshFile {
     
     // @Override
     public long getLastModified() {
-        final long lastModified;
+        long lastModified;
         
         if (lastModifiedRfc1123 != null) {
             try {
+                // The WebDAV specs require dates to be RFC1123 formatted.
                 lastModified = RFC1123_DATE_FORMAT.
                     parse(lastModifiedRfc1123).getTime();
             } catch (ParseException e) {
-                throw new IllegalStateException(
-                    String.format(
-                        "lastModifiedRfc1123 value (\"%s\") cannot be parsed",
-                        lastModifiedRfc1123
-                    ),
-                    e
-                );
+                // Handle ISO8601 formatted dates to support Artifactory.
+                try {
+                    lastModified = DatatypeConverter.
+                        parseDateTime(lastModifiedRfc1123).getTimeInMillis();
+                } catch (Exception e1) {
+                    throw new IllegalStateException(
+                        String.format(
+                            "unparseable lastModifiedRfc1123 (\"%s\")",
+                            lastModifiedRfc1123
+                        ),
+                        e
+                    );
+                }
             }
         } else {
             lastModified = System.currentTimeMillis();
