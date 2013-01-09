@@ -363,7 +363,14 @@ public class SftpProtocol implements ProtocolHandler {
                     Realm realm = servletReq.getConnector().getService().
                         getContainer().getRealm();
                     
-                    authenticated = realm instanceof NullRealm ||
+                    boolean isNullRealm;
+                    try {
+                        isNullRealm = realm instanceof NullRealm;
+                    } catch (NoClassDefFoundError e) {
+                        // NullRealm did not exist before Tomcat 7.0.24.
+                        isNullRealm = false;
+                    }
+                    authenticated = isNullRealm ||
                         realm.authenticate(username, password) != null;
                 }
                 
