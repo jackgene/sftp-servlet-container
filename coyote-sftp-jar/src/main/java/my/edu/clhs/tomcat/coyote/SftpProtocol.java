@@ -39,6 +39,7 @@ import org.apache.catalina.Context;
 import org.apache.catalina.Manager;
 import org.apache.catalina.Realm;
 import org.apache.catalina.connector.CoyoteAdapter;
+import org.apache.catalina.realm.JAASRealm;
 import org.apache.catalina.realm.NullRealm;
 import org.apache.coyote.Adapter;
 import org.apache.coyote.Constants;
@@ -367,8 +368,10 @@ public class SftpProtocol implements ProtocolHandler {
                     try {
                         isNullRealm = realm instanceof NullRealm;
                     } catch (NoClassDefFoundError e) {
-                        // NullRealm did not exist before Tomcat 7.0.24.
-                        isNullRealm = false;
+                        // NullRealm was introduced in Tomcat 7.0.24.
+                        // Before that an unconfigured JAASRealm was default.
+                        isNullRealm = realm instanceof JAASRealm &&
+                            ((JAASRealm)realm).getUserClassNames() == null;
                     }
                     authenticated = isNullRealm ||
                         realm.authenticate(username, password) != null;
