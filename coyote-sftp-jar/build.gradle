@@ -16,7 +16,15 @@ jar {
 }
 
 repositories {
-  mavenCentral()
+  ext.mavenCentralMirrorUrl =
+    getProperty('repositories.MAVEN_CENTRAL_MIRROR_URL')
+  if (mavenCentralMirrorUrl) {
+    maven {
+      url mavenCentralMirrorUrl
+    }
+  } else {
+    mavenCentral()
+  }
 }
 
 configurations {
