@@ -35,6 +35,8 @@ import java.util.concurrent.Executor;
 
 import javax.management.ObjectName;
 
+import my.edu.clhs.sshd.server.command.ServletScpCommand;
+
 import org.apache.catalina.Context;
 import org.apache.catalina.Manager;
 import org.apache.catalina.Realm;
@@ -66,7 +68,6 @@ import org.apache.sshd.server.FileSystemView;
 import org.apache.sshd.server.ForwardingFilter;
 import org.apache.sshd.server.PasswordAuthenticator;
 import org.apache.sshd.server.ServerFactoryManager;
-import org.apache.sshd.server.command.ScpCommandFactory;
 import org.apache.sshd.server.keyprovider.PEMGeneratorHostKeyProvider;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
@@ -458,7 +459,7 @@ public class SftpProtocol implements ProtocolHandler {
         endpoint.setSubsystemFactories(
             Collections.<NamedFactory<Command>>singletonList(
             new SftpSubsystem.Factory()));
-        endpoint.setCommandFactory(new ScpCommandFactory());
+        endpoint.setCommandFactory(new ServletScpCommand.Factory());
     }
     
     // @Override - ProtocolHandler
