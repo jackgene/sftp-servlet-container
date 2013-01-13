@@ -173,8 +173,14 @@ class SftpServletFileSystemView implements FileSystemView {
     // @Override
     public SshFile getFile(String path) {
         SshFile sshFile = null;
-        final String absolutePath =
-            (path == null || path.equals(".")) ? "/" : path;
+        final String absolutePath;
+        try {
+            absolutePath =
+                new File("/", (path == null || path.equals(".")) ? "/" : path).
+                getCanonicalPath();
+        } catch (IOException e) {
+            throw new IOError(e);
+        }
         
         try {
             // If DAV is supported use DAV response
@@ -285,23 +291,32 @@ class SftpServletFileSystemView implements FileSystemView {
     
     public OutputStream getFileOutputStream(final String absolutePath)
             throws IOException {
-        PipedOutputStream os = new PipedOutputStream();
+        final PipedOutputStream os = new PipedOutputStream();
         final PipedInputStream is = new PipedInputStream(os);
         
         new Thread(new Runnable() {
             public void run() {
-                InputBuffer inputBuffer = new InputBuffer() {
-                    public int doRead(ByteChunk chunk, Request request)
-                            throws IOException {
-                        byte[] buffer = new byte[1024];
-                        int len = is.read(buffer);
-                        chunk.setBytes(buffer, 0, len);
-                        
-                        return len;
+                try {
+                    InputBuffer inputBuffer = new InputBuffer() {
+                        public int doRead(ByteChunk chunk, Request request)
+                                throws IOException {
+                            byte[] buffer = new byte[8192];
+                            int len = is.read(buffer);
+                            chunk.setBytes(buffer, 0, len);
+                            
+                            return len;
+                        }
+                    };
+                    protocol.service(
+                        absolutePath, "PUT", session, null, inputBuffer, null);
+                } finally {
+                    try {
+                        os.close();
+                        is.close();
+                    } catch (IOException e) {
+                        throw new IOError(e);
                     }
-                };
-                protocol.service(
-                    absolutePath, "PUT", session, null, inputBuffer, null);
+                }
             }
         }).start();
         
