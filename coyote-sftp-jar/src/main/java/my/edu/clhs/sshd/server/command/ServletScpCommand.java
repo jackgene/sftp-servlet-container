@@ -45,7 +45,8 @@ public class ServletScpCommand extends ScpCommand {
             for (int i = from; i < args.length; i++) {
                 sb.append(args[i] + " ");
             }
-            return sb.toString().trim();
+            
+            return sb.toString().trim().replaceAll("\"", "");
         }
         
         private String[] splitCommandString(String command) {
@@ -149,9 +150,7 @@ public class ServletScpCommand extends ScpCommand {
         } else {
             throw new IOException("Can not write to " + path);
         }
-        if (file.doesExist() && file.isDirectory()) {
-            throw new IOException("File is a directory: " + file);
-        } else if (file.doesExist() && !file.isWritable()) {
+        if (file.doesExist() && !file.isWritable()) {
             throw new IOException("Can not write to file: " + file);
         }
         OutputStream os = file.createOutputStream(0);
