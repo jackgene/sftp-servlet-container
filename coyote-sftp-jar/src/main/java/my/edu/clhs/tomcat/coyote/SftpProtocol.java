@@ -55,6 +55,7 @@ import org.apache.coyote.http11.filters.VoidOutputFilter;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 import org.apache.mina.core.session.IoSession;
+import org.apache.mina.util.Base64;
 import org.apache.sshd.SshServer;
 import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.common.Session;
@@ -85,6 +86,8 @@ public class SftpProtocol implements ProtocolHandler {
     private static final Log log = LogFactory.getLog(SftpProtocol.class);
     private static final StringManager sm =
         StringManager.getManager(Constants.Package);
+    private static final AttributeKey<String> PASSWORD_KEY =
+        new AttributeKey<String>();
     private static final AttributeKey<Set<org.apache.catalina.Session>>
         SESSIONS_KEY = new AttributeKey<Set<org.apache.catalina.Session>>();
     private static final AttributeKey<Set<HttpCookie>> COOKIES_KEY =
@@ -260,10 +263,29 @@ public class SftpProtocol implements ProtocolHandler {
             // so this should really never happen.
             throw new IOError(e);
         }
+        MimeHeaders reqHeaders = request.getMimeHeaders();
+        if (headers != null) {
+            for (Map.Entry<String,String> header : headers.entrySet()) {
+                reqHeaders.
+                    setValue(header.getKey()).
+                    setString(header.getValue());
+            }
+        }
         if (session != null) {
             String username = session.getUsername();
             if (!anonymousUsername.equals(username)) {
                 request.getRemoteUser().setString(username);
+                String password = session.getAttribute(PASSWORD_KEY);
+                if (password != null) {
+                    String credsBase64 = new String(
+                        Base64.encodeBase64(
+                            (username + ":" + password).getBytes()
+                        )
+                    );
+                    reqHeaders.
+                        setValue("Authorization").
+                        setString("Basic " + credsBase64);
+                }
             }
             if (session instanceof AbstractSession) {
                 IoSession ioSession = ((AbstractSession)session).getIoSession();
@@ -276,16 +298,6 @@ public class SftpProtocol implements ProtocolHandler {
                     remoteAddr.getHostName()
                 );
             }
-        }
-        MimeHeaders reqHeaders = request.getMimeHeaders();
-        if (headers != null) {
-            for (Map.Entry<String,String> header : headers.entrySet()) {
-                reqHeaders.
-                setValue(header.getKey()).
-                setString(header.getValue());
-            }
-        }
-        if (session != null) {
             insertCookieHeaders(
                 reqHeaders, getCookiesFrom(session, normalizedPath));
         }
@@ -376,6 +388,9 @@ public class SftpProtocol implements ProtocolHandler {
                     }
                     authenticated = isNullRealm ||
                         realm.authenticate(username, password) != null;
+                    if (authenticated) {
+                        session.setAttribute(PASSWORD_KEY, password);
+                    }
                 }
                 
                 return authenticated;
