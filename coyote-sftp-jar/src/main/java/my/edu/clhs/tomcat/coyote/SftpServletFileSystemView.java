@@ -31,7 +31,7 @@ import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -204,7 +204,7 @@ class SftpServletFileSystemView implements FileSystemView {
                     throw new InvalidDavContentException(absolutePath);
                 }
             } else {
-                sshFile = new ServletResourceSshFile.Builder(this).
+                sshFile = new WebDAVServletResourceSshFile.Builder(this).
                     path(absolutePath).
                     doesExist(false).
                     build();
@@ -225,24 +225,18 @@ class SftpServletFileSystemView implements FileSystemView {
                 } else {
                     // If the path represents a real resource or
                     // it does not, but is not HELP_FILENAME
-                    sshFile = new ServletResourceSshFile.Builder(this).
-                        path(absolutePath).
-                        isFile(isFile).
-                        isDirectory(!isFile).
-                        size(response.getContentLengthLong()).
-                        lastModifiedRfc1123(
-                            response.getMimeHeaders().
-                            getHeader("Last-Modified")
-                        ).
-                        build();
+                    sshFile = new DefaultServletResourceSshFile(
+                        this, absolutePath, !isFile,
+                        response.getMimeHeaders().
+                            getHeader("Last-Modified"),
+                        response.getContentLengthLong()
+                    );
                 }
             } else {
                 // If the the requested URI ends with a /
-                sshFile = new ServletResourceSshFile.Builder(this).
-                    path(absolutePath).
-                    isFile(false).
-                    isDirectory(true).
-                    build();
+                sshFile = new DefaultServletResourceSshFile(
+                    this, absolutePath, true
+                );
             }
         }
         
@@ -269,24 +263,18 @@ class SftpServletFileSystemView implements FileSystemView {
     }
     
     public List<SshFile> getDirectoryContents(String absolutePath) {
-        List<SshFile> directoryContents = new ArrayList<SshFile>();
-        
         try {
             InputStream responseXml = propFindResponseXmlBody(absolutePath, 1);
             if (responseXml != null) {
-                directoryContents.addAll(
-                    xmlToFiles(absolutePath, responseXml, absolutePath)
-                );
+                return Collections.unmodifiableList(
+                    xmlToFiles(absolutePath, responseXml, absolutePath));
+            } else {
+                return Collections.emptyList();
             }
         } catch (DavProcessingException e) {
-            directoryContents.add(
-                new ClassPathResourceSshFile(
-                    absolutePath + "/" + HELP_FILENAME, HELP_FILENAME
-                )
-            );
+            // TODO return file indicating an error occurred?
+            return Collections.emptyList();
         }
-        
-        return directoryContents;
     }
     
     public OutputStream getFileOutputStream(final String absolutePath)
