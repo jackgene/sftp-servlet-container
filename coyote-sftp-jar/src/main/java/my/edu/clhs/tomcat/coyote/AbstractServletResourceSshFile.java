@@ -1,7 +1,7 @@
 /*
- * ServletResourceSshFile.java
+ * AbstractServletResourceSshFile.java
  *
- * Copyright 2011-2012 Jack Leow
+ * Copyright 2011-2013 Jack Leow
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,17 +25,16 @@ import java.io.OutputStream;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.List;
 
 import javax.xml.bind.DatatypeConverter;
 
 import org.apache.sshd.server.SshFile;
 
-class ServletResourceSshFile implements SshFile {
+abstract class AbstractServletResourceSshFile implements SshFile {
     private static final DateFormat RFC1123_DATE_FORMAT =
         new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
     
-    private final SftpServletFileSystemView fileSystem;
+    protected final SftpServletFileSystemView fileSystem;
     /**
      * The path of this file. {@link File} is used here to take
      * advantage of common file operations it provides, such as
@@ -45,69 +44,28 @@ class ServletResourceSshFile implements SshFile {
     private final File path;
     private final String lastModifiedRfc1123;
     
-    public static class Builder {
-        private final SftpServletFileSystemView fileSystemView;
-        public Builder(SftpServletFileSystemView fileSystemView) {
-            this.fileSystemView = fileSystemView;
-        }
-        
-        private String path;
-        public Builder path(String path) {
-            this.path = path;
-            return this;
-        }
-        
-        private boolean isDirectory;
-        public Builder isDirectory(boolean isDirectory) {
-            this.isDirectory = isDirectory;
-            return this;
-        }
-        
-        private boolean isFile;
-        public Builder isFile(boolean isFile) {
-            this.isFile = isFile;
-            return this;
-        }
-        
-        private boolean exists = true; // This makes it HttpServlet compatible.
-        public Builder doesExist(boolean exists) {
-            this.exists = exists;
-            return this;
-        }
-        
-        private String lastModifiedRfc1123;
-        public Builder lastModifiedRfc1123(String lastModifiedRfc1123) {
-            this.lastModifiedRfc1123 = lastModifiedRfc1123;
-            return this;
-        }
-       
-        private long size = 0L;
-        public Builder size(long size) {
-            this.size = size;
-            return this;
-        }
-        
-        public ServletResourceSshFile build() {
-            return new ServletResourceSshFile(this);
-        }
-    }
-    
-    private ServletResourceSshFile(Builder builder) {
-        fileSystem = builder.fileSystemView;
-        path = new File(builder.path);
+    AbstractServletResourceSshFile(
+            SftpServletFileSystemView fileSystem, String path,
+            boolean isDirectory, String lastModifiedRfc1123, long size) {
+        this.fileSystem = fileSystem;
+        this.path = new File(path);
         try {
-            absolutePath = path.getCanonicalPath();
+            absolutePath = this.path.getCanonicalPath();
         } catch (IOException e) {
             throw new IllegalArgumentException(
                 "Cannot create ServletResourceSshFile with malformed path spec",
                 e
             );
         }
-        isDirectory = builder.isDirectory;
-        isFile = builder.isFile;
-        exists = builder.exists;
-        lastModifiedRfc1123 = builder.lastModifiedRfc1123;
-        size = builder.size;
+        this.isDirectory = isDirectory;
+        this.lastModifiedRfc1123 = lastModifiedRfc1123;
+        this.size = size;
+    }
+    
+    AbstractServletResourceSshFile(
+            SftpServletFileSystemView fileSystem, String path,
+            boolean isDirectory) {
+        this(fileSystem, path, isDirectory, null, 0);
     }
     
     private final String absolutePath;
@@ -130,18 +88,6 @@ class ServletResourceSshFile implements SshFile {
     // @Override
     public boolean isDirectory() {
         return isDirectory;
-    }
-    
-    private final boolean isFile;
-    // @Override
-    public boolean isFile() {
-        return isFile;
-    }
-    
-    private final boolean exists;
-    // @Override
-    public boolean doesExist() {
-        return exists;
     }
     
     // @Override
@@ -233,11 +179,6 @@ class ServletResourceSshFile implements SshFile {
     // @Override
     public boolean move(SshFile destination) {
         return false;
-    }
-    
-    // @Override
-    public List<SshFile> listSshFiles() {
-        return fileSystem.getDirectoryContents(getAbsolutePath());
     }
     
     // @Override
