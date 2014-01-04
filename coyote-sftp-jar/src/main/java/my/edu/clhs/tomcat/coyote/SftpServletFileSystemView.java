@@ -31,7 +31,7 @@ import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -268,14 +268,16 @@ class SftpServletFileSystemView implements FileSystemView {
     }
     
     public List<SshFile> getDirectoryContents(String absolutePath) {
-        List<SshFile> directoryContents = new ArrayList<SshFile>();
+        List<SshFile> directoryContents;
         
         try {
             InputStream responseXml = propFindResponseXmlBody(absolutePath, 1);
             if (responseXml != null) {
-                directoryContents.addAll(
+                directoryContents = Collections.unmodifiableList(
                     xmlToFiles(absolutePath, responseXml, absolutePath)
                 );
+            } else {
+                directoryContents = Collections.emptyList();
             }
         } catch (DavProcessingException e) {
             log.debug(
@@ -283,7 +285,7 @@ class SftpServletFileSystemView implements FileSystemView {
                 "falling back to directory with help file.",
                 e
             );
-            directoryContents.add(
+            directoryContents = Collections.<SshFile>singletonList(
                 new ClassPathResourceSshFile(
                     absolutePath + "/" + HELP_FILENAME, HELP_FILENAME
                 )
