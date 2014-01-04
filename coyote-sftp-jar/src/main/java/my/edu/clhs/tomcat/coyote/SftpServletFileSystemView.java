@@ -131,6 +131,7 @@ class SftpServletFileSystemView implements FileSystemView {
         // (including Spring MVC) to return 207.
         // SC_NOT_FOUND is technically also valid, but for our purposes
         // we'd like to process it as if it's an invalid request.
+        // TODO handle 302?
         if (status == SC_MULTI_STATUS || status == SC_OK) {
             content = new ByteArrayInputStream(
                 webDavChunk.getBuffer(), webDavChunk.getOffset(), webDavChunk.getLength());
