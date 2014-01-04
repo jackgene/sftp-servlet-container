@@ -32,7 +32,7 @@ import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * SAX handler that parses DAV:multistatus XML content into
- * {@link ServletResourceSshFile}s.
+ * {@link WebDAVServletResourceSshFile}s.
  * 
  * @author Jack Leow
  */
@@ -48,8 +48,8 @@ class WebDavSaxHandler extends DefaultHandler {
         this.pathToDiscard = pathToDiscard;
     }
     
-    private List<ServletResourceSshFile> files;
-    private ServletResourceSshFile.Builder fileBuilder;
+    private List<WebDAVServletResourceSshFile> files;
+    private WebDAVServletResourceSshFile.Builder fileBuilder;
     private StringBuilder charBuffer;
     
     private boolean shouldDiscard(String path) {
@@ -57,7 +57,7 @@ class WebDavSaxHandler extends DefaultHandler {
             new File(pathToDiscard).equals(new File(path));
     }
     
-    public List<ServletResourceSshFile> getFiles() {
+    public List<WebDAVServletResourceSshFile> getFiles() {
         return Collections.unmodifiableList(files);
     }
     
@@ -69,7 +69,7 @@ class WebDavSaxHandler extends DefaultHandler {
                     String qName, Attributes attributes) {
                 if (NAMESPACE_URI.equals(uri) &&
                         "multistatus".equals(localName)) {
-                    context.files = new ArrayList<ServletResourceSshFile>();
+                    context.files = new ArrayList<WebDAVServletResourceSshFile>();
                     return MULTISTATUS;
                 }
                 return super.startElement(
@@ -84,7 +84,7 @@ class WebDavSaxHandler extends DefaultHandler {
                 if (NAMESPACE_URI.equals(uri) &&
                         "response".equals(localName)) {
                     context.fileBuilder =
-                        new ServletResourceSshFile.Builder(
+                        new WebDAVServletResourceSshFile.Builder(
                         context.fileSystemView);
                     return RESPONSE;
                 }

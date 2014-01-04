@@ -209,7 +209,7 @@ class SftpServletFileSystemView implements FileSystemView {
                     throw new InvalidDavContentException(absolutePath);
                 }
             } else {
-                sshFile = new ServletResourceSshFile.Builder(this).
+                sshFile = new WebDAVServletResourceSshFile.Builder(this).
                     path(absolutePath).
                     doesExist(false).
                     build();
@@ -230,24 +230,18 @@ class SftpServletFileSystemView implements FileSystemView {
                 } else {
                     // If the path represents a real resource or
                     // it does not, but is not HELP_FILENAME
-                    sshFile = new ServletResourceSshFile.Builder(this).
-                        path(absolutePath).
-                        isFile(isFile).
-                        isDirectory(!isFile).
-                        size(response.getContentLengthLong()).
-                        lastModifiedRfc1123(
-                            response.getMimeHeaders().
-                            getHeader("Last-Modified")
-                        ).
-                        build();
+                    sshFile = new DefaultServletResourceSshFile(
+                        this, absolutePath, !isFile,
+                        response.getMimeHeaders().
+                            getHeader("Last-Modified"),
+                        response.getContentLengthLong()
+                    );
                 }
             } else {
                 // If the the requested URI ends with a /
-                sshFile = new ServletResourceSshFile.Builder(this).
-                    path(absolutePath).
-                    isFile(false).
-                    isDirectory(true).
-                    build();
+                sshFile = new DefaultServletResourceSshFile(
+                    this, absolutePath, true
+                );
             }
         }
         
