@@ -414,11 +414,14 @@ public class SftpProtocol implements ProtocolHandler {
                         new Comparator<HttpCookie>() {
                             public int compare(HttpCookie l, HttpCookie r) {
                                 String lPath = l.getPath();
+                                if (lPath == null) lPath = "";
                                 String rPath = r.getPath();
-                                int lLen = lPath != null ? lPath.length() : 0;
-                                int rLen = rPath != null ? rPath.length() : 0;
+                                if (rPath == null) rPath = "";
                                 
-                                int diff = rLen - lLen;
+                                final int lLen = lPath.length();
+                                final int rLen = rPath.length();
+                                
+                                final int diff = rLen - lLen;
                                 
                                 if (diff != 0) {
                                     return diff;
