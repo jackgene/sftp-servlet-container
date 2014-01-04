@@ -24,6 +24,8 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import my.edu.clhs.tomcat.coyote.WebDAVServletResourceSshFile;
+
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.CommandFactory;
 import org.apache.sshd.server.Environment;
@@ -139,16 +141,11 @@ public class ServletScpCommand extends ScpCommand {
         String name = header.substring(header.indexOf(' ', 6) + 1);
         
         SshFile file;
-        if (path.doesExist() && path.isDirectory()) {
+        if (path instanceof WebDAVServletResourceSshFile &&
+                path.doesExist() && path.isDirectory()) {
             file = root.getFile(path, name);
-        } else if (path.doesExist() && path.isFile()) {
-            file = path;
-        } else if (!path.doesExist()
-                /* && path.getParentFile().doesExist()
-                 * && path.getParentFile().isDirectory()*/) {
-            file = path;
         } else {
-            throw new IOException("Can not write to " + path);
+            file = path;
         }
         if (file.doesExist() && !file.isWritable()) {
             throw new IOException("Can not write to file: " + file);

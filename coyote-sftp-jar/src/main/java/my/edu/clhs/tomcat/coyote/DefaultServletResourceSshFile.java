@@ -22,7 +22,8 @@ import java.util.List;
 
 import org.apache.sshd.server.SshFile;
 
-class DefaultServletResourceSshFile extends AbstractServletResourceSshFile {
+public class DefaultServletResourceSshFile
+        extends AbstractServletResourceSshFile {
     DefaultServletResourceSshFile(
             SftpServletFileSystemView fileSystem, String path,
             boolean isDirectory, String lastModifiedRfc1123, long size) {

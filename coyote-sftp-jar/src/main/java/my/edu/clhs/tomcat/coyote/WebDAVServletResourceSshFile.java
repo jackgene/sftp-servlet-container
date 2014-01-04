@@ -21,7 +21,8 @@ import java.util.List;
 
 import org.apache.sshd.server.SshFile;
 
-class WebDAVServletResourceSshFile extends AbstractServletResourceSshFile {
+public class WebDAVServletResourceSshFile
+        extends AbstractServletResourceSshFile {
     public static class Builder {
         private final SftpServletFileSystemView fileSystemView;
         public Builder(SftpServletFileSystemView fileSystemView) {
