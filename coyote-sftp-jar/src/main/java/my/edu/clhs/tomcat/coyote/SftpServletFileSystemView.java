@@ -45,6 +45,8 @@ import org.apache.coyote.OutputBuffer;
 import org.apache.coyote.Request;
 import org.apache.coyote.Response;
 import org.apache.coyote.http11.Constants;
+import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
 import org.apache.sshd.common.Session;
 import org.apache.sshd.server.FileSystemView;
 import org.apache.sshd.server.SshFile;
@@ -56,6 +58,7 @@ class SftpServletFileSystemView implements FileSystemView {
     public static final String HELP_FILENAME = "WHERE_ARE_MY_FILES.txt";
     
     private static final int SC_MULTI_STATUS = 207;
+    private static final Log log = LogFactory.getLog(SftpServletFileSystemView.class);
     
     private final SftpProtocol protocol;
     private final Session session;
@@ -129,11 +132,12 @@ class SftpServletFileSystemView implements FileSystemView {
         // SC_NOT_FOUND is technically also valid, but for our purposes
         // we'd like to process it as if it's an invalid request.
         if (status == SC_MULTI_STATUS || status == SC_OK) {
-            content = new ByteArrayInputStream(webDavChunk.getBuffer());
+            content = new ByteArrayInputStream(
+                webDavChunk.getBuffer(), webDavChunk.getOffset(), webDavChunk.getLength());
         } else if (status == SC_NOT_FOUND) {
             content = null;
         } else {
-            throw new DavUnsupportedException(absolutePath);
+            throw new DavUnsupportedException(absolutePath, status);
         }
         
         return content;
@@ -273,6 +277,11 @@ class SftpServletFileSystemView implements FileSystemView {
                 );
             }
         } catch (DavProcessingException e) {
+            log.debug(
+                "PROPFIND failed while getting directory contents, " +
+                "falling back to directory with help file.",
+                e
+            );
             directoryContents.add(
                 new ClassPathResourceSshFile(
                     absolutePath + "/" + HELP_FILENAME, HELP_FILENAME
@@ -341,8 +350,7 @@ class SftpServletFileSystemView implements FileSystemView {
                     try {
                         pos.close();
                     } catch (IOException e) {
-                        // TODO user proper logger
-                        e.printStackTrace();
+                        log.error("Unable to close PipedOutputStream", e);
                         // do nothing
                     }
                 }

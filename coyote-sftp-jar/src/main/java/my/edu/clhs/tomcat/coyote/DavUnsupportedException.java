@@ -25,10 +25,10 @@ package my.edu.clhs.tomcat.coyote;
 class DavUnsupportedException extends DavProcessingException {
     private static final long serialVersionUID = 1L;
     
-    private static final String DEFAULT_MESSAGE =
-        "Resource does not support HTTP DAV methods";
+    private static final String DEFAULT_MESSAGE_FORMAT =
+        "Resource responded with HTTP status code %d";
     
-    public DavUnsupportedException(String resourcePath) {
-        super(DEFAULT_MESSAGE, resourcePath);
+    public DavUnsupportedException(String resourcePath, int statusCode) {
+        super(String.format(DEFAULT_MESSAGE_FORMAT, statusCode), resourcePath);
     }
 }
