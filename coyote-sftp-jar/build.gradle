@@ -1,7 +1,7 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
 
-version = '7.0.1-SNAPSHOT'
+version = '7.0.1'
 sourceCompatibility = 1.6
 // Add dependencies.JDK6_CORE_LIB property to ~/.gradle/gradle.properties
 // referencing core libraries jar (rt.jar or classes.jar)
