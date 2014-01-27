@@ -1,0 +1,8 @@
+Due to technical limitations of the server, files and directories are
+hidden (they cannot be listed).
+
+In order to download a file or upload a file to a directory, please ask
+the system administrator for the full path of the file or directory.
+
+(System administrators may list available file paths in here by copying
+this into the root web application's root directory and editing it)
