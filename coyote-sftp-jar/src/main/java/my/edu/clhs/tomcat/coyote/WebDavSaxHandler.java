@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.juli.logging.Log;
+import org.apache.juli.logging.LogFactory;
 import org.xml.sax.Attributes;
 import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
@@ -38,14 +40,19 @@ import org.xml.sax.helpers.DefaultHandler;
  */
 class WebDavSaxHandler extends DefaultHandler {
     private static final String NAMESPACE_URI = "DAV:";
+    private static final String FALLBACK_URI_ENCODING = "iso-8859-1";
+    private static final Log log = LogFactory.getLog(WebDavSaxHandler.class);
     
     private final SftpServletFileSystemView fileSystemView;
     private final String pathToDiscard;
+    private final String uriEncoding;
     
     public WebDavSaxHandler(
-            SftpServletFileSystemView fileSystemView, String pathToDiscard) {
+            SftpServletFileSystemView fileSystemView, String pathToDiscard,
+            String uriEncoding) {
         this.fileSystemView = fileSystemView;
         this.pathToDiscard = pathToDiscard;
+        this.uriEncoding = uriEncoding;
     }
     
     private List<WebDAVServletResourceSshFile> files;
@@ -142,13 +149,24 @@ class WebDavSaxHandler extends DefaultHandler {
                         "href".equals(localName)) {
                     String href = context.charBuffer.toString();
                     try {
-                        // TODO should I hardcode the character encoding?
                         href = URLDecoder.decode(
                             href.replace("+", PLUS_URLENCODED),
-                            "UTF-8"
+                            context.uriEncoding
                         );
                     } catch (UnsupportedEncodingException e) {
-                        // do nothing
+                        log.warn(
+                            "\"URIEncoding\" (" + context.uriEncoding +
+                            ") not supported. Falling back to " +
+                            FALLBACK_URI_ENCODING
+                        );
+                        try {
+                            href = URLDecoder.decode(
+                                href.replace("+", PLUS_URLENCODED),
+                                FALLBACK_URI_ENCODING
+                            );
+                        } catch (UnsupportedEncodingException e1) {
+                            // do nothing
+                        }
                     }
                     if (context.shouldDiscard(href)) {
                         return DISCARD;

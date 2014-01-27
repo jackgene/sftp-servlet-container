@@ -135,6 +135,11 @@ public class SftpProtocol implements ProtocolHandler {
     public String getHost() { return endpoint.getHost(); }
     public void setHost(String host) { endpoint.setHost(host); }
     
+    private String URIEncoding = "iso-8859-1";
+    public void setURIEncoding(String URIEncoding) {
+        this.URIEncoding = URIEncoding;
+    };
+    
     private String anonymousUsername = "anonymous";
     public void setAnonymousUsername(String anonymousUsername) {
         this.anonymousUsername = anonymousUsername;
@@ -471,7 +476,7 @@ public class SftpProtocol implements ProtocolHandler {
                     }
                 });
                 return new SftpServletFileSystemView(
-                    SftpProtocol.this, session);
+                    SftpProtocol.this, session, URIEncoding);
             }
         });
         endpoint.setSubsystemFactories(
