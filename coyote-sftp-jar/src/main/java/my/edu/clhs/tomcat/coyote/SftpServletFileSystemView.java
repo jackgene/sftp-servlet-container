@@ -134,7 +134,10 @@ class SftpServletFileSystemView implements FileSystemView {
         // TODO handle 302?
         if (status == SC_MULTI_STATUS || status == SC_OK) {
             content = new ByteArrayInputStream(
-                webDavChunk.getBuffer(), webDavChunk.getOffset(), webDavChunk.getLength());
+                webDavChunk.getBuffer(),
+                webDavChunk.getOffset(),
+                webDavChunk.getLength()
+            );
         } else if (status == SC_NOT_FOUND) {
             content = null;
         } else {
