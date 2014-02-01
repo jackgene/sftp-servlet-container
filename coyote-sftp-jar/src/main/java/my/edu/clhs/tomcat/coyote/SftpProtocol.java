@@ -17,11 +17,10 @@
  */
 package my.edu.clhs.tomcat.coyote;
 
-import java.io.File;
-import java.io.IOError;
 import java.io.IOException;
 import java.net.HttpCookie;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -234,36 +233,31 @@ public class SftpProtocol implements ProtocolHandler {
      * @return response objects (containing header information).
      */
     Response service(
-            String uri, String method, Session session,
+            String path, String method, Session session,
             Map<String,String> headers,
             InputBuffer inputBuffer, OutputBuffer outputBuffer) {
-        Request request = new Request();
+        final Request request = new Request();
         request.setInputBuffer(inputBuffer);
         
-        Response response = new Response();
+        final Response response = new Response();
         if (outputBuffer == null) outputBuffer = new VoidOutputFilter();
         response.setOutputBuffer(outputBuffer);
         
-        RequestInfo rp = request.getRequestProcessor();
+        final RequestInfo rp = request.getRequestProcessor();
         rp.setStage(org.apache.coyote.Constants.STAGE_PREPARE);
         request.scheme().setString("sftp");
-        request.serverName().setString(endpoint.getHost());
+        request.serverName().setString(getHost());
+        request.setServerPort(getPort());
         request.protocol().setString("SFTP");
         request.method().setString(method);
-        String normalizedPath;
-        try {
-            String[] uriComponents = uri.split("\\?", 2);
-            normalizedPath = new File(uriComponents[0]).getCanonicalPath();
-            request.requestURI().setString(normalizedPath);
-            if (uriComponents.length > 1) {
-                request.queryString().setString(uriComponents[1]);
-            }
-        } catch (IOException e) {
-            // By the time we get here, the path should have been validated
-            // so this should really never happen.
-            throw new IOError(e);
+        // Don't use File.getCanonicalPath() as it removes trailing slashes.
+        final URI uri = URI.create(path);
+        final String normalizedPath = uri.normalize().getPath();
+        request.requestURI().setString(normalizedPath);
+        if (null != uri.getQuery()) {
+            request.queryString().setString(uri.getQuery());
         }
-        MimeHeaders reqHeaders = request.getMimeHeaders();
+        final MimeHeaders reqHeaders = request.getMimeHeaders();
         if (headers != null) {
             for (Map.Entry<String,String> header : headers.entrySet()) {
                 reqHeaders.
@@ -272,12 +266,12 @@ public class SftpProtocol implements ProtocolHandler {
             }
         }
         if (session != null) {
-            String username = session.getUsername();
+            final String username = session.getUsername();
             if (!anonymousUsername.equals(username)) {
                 request.getRemoteUser().setString(username);
-                String password = session.getAttribute(PASSWORD_KEY);
+                final String password = session.getAttribute(PASSWORD_KEY);
                 if (password != null) {
-                    String credsBase64 = new String(
+                    final String credsBase64 = new String(
                         Base64.encodeBase64(
                             (username + ":" + password).getBytes()
                         )
@@ -288,15 +282,24 @@ public class SftpProtocol implements ProtocolHandler {
                 }
             }
             if (session instanceof AbstractSession) {
-                IoSession ioSession = ((AbstractSession)session).getIoSession();
-                InetSocketAddress remoteAddr =
+                final IoSession ioSession =
+                    ((AbstractSession)session).getIoSession();
+                
+                final InetSocketAddress localAddr =
+                    (InetSocketAddress)ioSession.getLocalAddress();
+                request.localAddr().setString(
+                    localAddr.getAddress().getHostAddress()
+                );
+                request.localName().setString(localAddr.getHostName());
+                request.setLocalPort(localAddr.getPort());
+                
+                final InetSocketAddress remoteAddr =
                     (InetSocketAddress)ioSession.getRemoteAddress();
                 request.remoteAddr().setString(
                     remoteAddr.getAddress().getHostAddress()
                 );
-                request.remoteHost().setString(
-                    remoteAddr.getHostName()
-                );
+                request.remoteHost().setString(remoteAddr.getHostName());
+                request.setRemotePort(remoteAddr.getPort());
             }
             insertCookieHeaders(
                 reqHeaders, getCookiesFrom(session, normalizedPath));
@@ -309,7 +312,7 @@ public class SftpProtocol implements ProtocolHandler {
             adapter.service(request, response);
         } catch (Exception e) {
             throw new RuntimeException(
-                "An error occurred requesting " + uri,
+                "An error occurred requesting " + path,
                 e);
         }
         if (session != null) {
@@ -332,9 +335,9 @@ public class SftpProtocol implements ProtocolHandler {
     }
     
     private String getName() {
-        StringBuilder name = new StringBuilder("sftp");
+        final StringBuilder name = new StringBuilder("sftp");
         name.append('-');
-        String host = getHost();
+        final String host = getHost();
         if (host != null) {
             name.append(host);
             name.append('-');
