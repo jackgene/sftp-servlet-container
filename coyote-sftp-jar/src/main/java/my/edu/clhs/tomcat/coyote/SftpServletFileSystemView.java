@@ -18,9 +18,12 @@
 package my.edu.clhs.tomcat.coyote;
 
 import static javax.servlet.http.HttpServletResponse.SC_CREATED;
+import static javax.servlet.http.HttpServletResponse.SC_FOUND;
+import static javax.servlet.http.HttpServletResponse.SC_MOVED_PERMANENTLY;
 import static javax.servlet.http.HttpServletResponse.SC_NOT_FOUND;
 import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static javax.servlet.http.HttpServletResponse.SC_TEMPORARY_REDIRECT;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -31,6 +34,7 @@ import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -131,13 +135,26 @@ class SftpServletFileSystemView implements FileSystemView {
         // (including Spring MVC) to return 207.
         // SC_NOT_FOUND is technically also valid, but for our purposes
         // we'd like to process it as if it's an invalid request.
-        // TODO handle 302?
         if (status == SC_MULTI_STATUS || status == SC_OK) {
             content = new ByteArrayInputStream(
                 webDavChunk.getBuffer(),
                 webDavChunk.getOffset(),
                 webDavChunk.getLength()
             );
+        } else if (status == SC_MOVED_PERMANENTLY ||
+                status == SC_FOUND || status == SC_TEMPORARY_REDIRECT) {
+            final String host = protocol.getHost();
+            final int port = protocol.getPort();
+            final URI redirectUri =
+                URI.create(response.getMimeHeaders().getHeader("Location"));
+            final String redirectHost = redirectUri.getHost();
+            final int redirectPort = redirectUri.getPort();
+            if (redirectHost.equals(host == null ? "localhost" : host) &&
+                    (redirectPort == -1 || redirectPort == port)) {
+                content = propFindResponseXmlBody(redirectUri.getPath(), depth);
+            } else {
+                throw new DavUnsupportedException(absolutePath, status);
+            }
         } else if (status == SC_NOT_FOUND) {
             content = null;
         } else {
