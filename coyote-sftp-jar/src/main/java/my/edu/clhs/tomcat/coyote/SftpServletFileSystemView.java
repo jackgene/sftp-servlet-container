@@ -66,10 +66,13 @@ class SftpServletFileSystemView implements FileSystemView {
     
     private final SftpProtocol protocol;
     private final Session session;
+    private final String uriEncoding;
     
-    SftpServletFileSystemView(SftpProtocol sftpProtocol, Session session) {
+    SftpServletFileSystemView(
+            SftpProtocol sftpProtocol, Session session, String uriEncoding) {
         protocol = sftpProtocol;
         this.session = session;
+        this.uriEncoding = uriEncoding;
     }
     
     private static final byte[] PROPFIND_ALLPROP_BODY;
@@ -170,7 +173,8 @@ class SftpServletFileSystemView implements FileSystemView {
         SAXParserFactory factory = SAXParserFactory.newInstance();
         factory.setNamespaceAware(true);
         factory.setValidating(true);
-        WebDavSaxHandler handler = new WebDavSaxHandler(this, pathToDiscard);
+        WebDavSaxHandler handler =
+            new WebDavSaxHandler(this, pathToDiscard, uriEncoding);
         
         try {
             SAXParser parser = factory.newSAXParser();
