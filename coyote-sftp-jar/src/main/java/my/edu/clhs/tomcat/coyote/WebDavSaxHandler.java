@@ -133,22 +133,25 @@ class WebDavSaxHandler extends DefaultHandler {
             }
         },
         HREF {
+            private final String PLUS_URLENCODED = "%2B";
             @Override
             State endElement(
                     WebDavSaxHandler context, String uri, String localName,
                     String qName) {
                 if (NAMESPACE_URI.equals(uri) &&
                         "href".equals(localName)) {
-                    String path = context.charBuffer.toString();
-                    if (context.shouldDiscard(path)) {
-                        return DISCARD;
-                    }
                     String href = context.charBuffer.toString();
                     try {
                         // TODO should I hardcode the character encoding?
-                        href = URLDecoder.decode(href, "UTF-8");
+                        href = URLDecoder.decode(
+                            href.replace("+", PLUS_URLENCODED),
+                            "UTF-8"
+                        );
                     } catch (UnsupportedEncodingException e) {
                         // do nothing
+                    }
+                    if (context.shouldDiscard(href)) {
+                        return DISCARD;
                     }
                     context.fileBuilder.path(href);
                     return RESPONSE;
