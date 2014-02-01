@@ -1,0 +1,42 @@
+Quick Installation Instructions
+===============================
+Pre-requisites:
+1.  A working installation of Apache Tomcat 7.0.x.
+
+
+Installing:
+After unzipping the distribution zip file:
+1. Copy all the files from /copy-to-tomcat-lib into Tomcat's lib
+   (e.g., ${CATALINA_HOME}/lib) directory.
+
+2. Add the following XML element inside the <Service> element of the
+   conf/server.xml file:
+   
+       <Connector port="2222" protocol="my.edu.clhs.tomcat.coyote.SftpProtocol"
+               anonymousUsername="anonymous" sessionTimeout="600000" />
+   
+   (You may wish to use a different port number or sessionTimeout value)
+
+3. Start Tomcat as you usually would.
+
+
+Verifying the installation:
+1. You should see the following line towards the end of the console output
+   (or in your catalina.out file):
+   
+   Jul 15, 2012 11:28:00 AM my.edu.clhs.tomcat.coyote.SftpProtocol start
+   INFO: Starting ProtocolHandler ["sftp-2222"]
+
+2. Try connecting to the server as user "anonymous" with an SFTP client, you
+   should see the following or equivalent for your client (this assumes you
+   have the default Tomcat ROOT webapp deployed):
+   
+   $ sftp -oPort=2222 anonymous@localhost
+   anonymous@localhost's password: (any password)
+   Connected to localhost.
+   sftp> ls
+   remote readdir("/"): Unknown status
+   sftp> get / index.html
+   Fetching / to index.html
+   /                                             100% 7779     7.6KB/s   00:00
+   sftp> 
