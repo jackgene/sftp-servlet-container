@@ -22,6 +22,7 @@ import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -49,14 +50,11 @@ abstract class AbstractServletResourceSshFile implements SshFile {
             boolean isDirectory, String lastModifiedRfc1123, long size) {
         this.fileSystem = fileSystem;
         this.path = new File(path);
-        try {
-            absolutePath = this.path.getCanonicalPath();
-        } catch (IOException e) {
-            throw new IllegalArgumentException(
-                "Cannot create ServletResourceSshFile with malformed path spec",
-                e
-            );
-        }
+        // Do not use File#getCanonicalPath(), as it resolves symlinks
+        this.absolutePath =
+            URI.create(
+                this.path.getAbsolutePath()
+            ).normalize().getPath();
         this.isDirectory = isDirectory;
         this.lastModifiedRfc1123 = lastModifiedRfc1123;
         this.size = size;
