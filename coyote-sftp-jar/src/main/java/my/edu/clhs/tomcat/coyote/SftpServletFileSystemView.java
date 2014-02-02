@@ -62,7 +62,8 @@ class SftpServletFileSystemView implements FileSystemView {
     public static final String HELP_FILENAME = "WHERE_ARE_MY_FILES.txt";
     
     private static final int SC_MULTI_STATUS = 207;
-    private static final Log log = LogFactory.getLog(SftpServletFileSystemView.class);
+    private static final Log log =
+        LogFactory.getLog(SftpServletFileSystemView.class);
     
     private final SftpProtocol protocol;
     private final Session session;
@@ -190,26 +191,16 @@ class SftpServletFileSystemView implements FileSystemView {
         return handler.getFiles();
     }
     
-    private boolean isEquivalent(String path, SshFile file) {
-        try {
-            return (new File(path).getCanonicalPath()).
-                equals(file.getAbsolutePath());
-        } catch (IOException e) {
-            return false;
-        }
-    }
-    
     // @Override
     public SshFile getFile(String path) {
         SshFile sshFile = null;
-        final String absolutePath;
-        try {
-            absolutePath =
-                new File("/", (path == null || path.equals(".")) ? "/" : path).
-                getCanonicalPath();
-        } catch (IOException e) {
-            throw new IOError(e);
-        }
+        // Do not use File#getCanonicalPath(), as it resolves symlinks
+        final String absolutePath =
+            URI.create(
+                new File(
+                    "/", (path == null || path.equals(".")) ? "/" : path
+                ).getAbsolutePath()
+            ).normalize().getPath();
         
         try {
             // If DAV is supported use DAV response
@@ -223,7 +214,7 @@ class SftpServletFileSystemView implements FileSystemView {
                 // However some broken DAV implementations may return more
                 // than one item.
                 for (SshFile file : files) {
-                    if (isEquivalent(path, file)) {
+                    if (absolutePath.equals(file.getAbsolutePath())) {
                         sshFile = file;
                         break;
                     }
