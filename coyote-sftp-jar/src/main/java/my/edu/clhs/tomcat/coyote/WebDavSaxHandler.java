@@ -18,6 +18,7 @@
 package my.edu.clhs.tomcat.coyote;
 
 import java.io.File;
+import java.io.IOError;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
@@ -147,12 +148,10 @@ class WebDavSaxHandler extends DefaultHandler {
                     String qName) {
                 if (NAMESPACE_URI.equals(uri) &&
                         "href".equals(localName)) {
-                    String href = context.charBuffer.toString();
+                    String href = context.charBuffer.toString().
+                        replace("+", PLUS_URLENCODED);
                     try {
-                        href = URLDecoder.decode(
-                            href.replace("+", PLUS_URLENCODED),
-                            context.uriEncoding
-                        );
+                        href = URLDecoder.decode(href, context.uriEncoding);
                     } catch (UnsupportedEncodingException e) {
                         log.warn(
                             "\"URIEncoding\" (" + context.uriEncoding +
@@ -161,11 +160,11 @@ class WebDavSaxHandler extends DefaultHandler {
                         );
                         try {
                             href = URLDecoder.decode(
-                                href.replace("+", PLUS_URLENCODED),
-                                FALLBACK_URI_ENCODING
+                                href, FALLBACK_URI_ENCODING
                             );
                         } catch (UnsupportedEncodingException e1) {
-                            // do nothing
+                            // This should never happen
+                            throw new IOError(e1);
                         }
                     }
                     if (context.shouldDiscard(href)) {
