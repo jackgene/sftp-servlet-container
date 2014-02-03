@@ -231,7 +231,8 @@ class SftpServletFileSystemView implements FileSystemView {
             }
         } catch (DavProcessingException e) {
             // If DAV isn't supported...
-            if (!absolutePath.endsWith("/") && !absolutePath.endsWith("..")) {
+            if (!path.endsWith("/") && !path.endsWith("/.") &&
+                    !path.endsWith("/..")) {
                 // If the the requested URI does not end with a /
                 Response response = protocol.service(
                     absolutePath, Constants.HEAD, session, null, null, null);
