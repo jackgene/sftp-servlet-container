@@ -356,12 +356,20 @@ public class SftpProtocol implements ProtocolHandler {
         if (log.isInfoEnabled()) {
             log.info(sm.getString("abstractProtocolHandler.init", getName()));
         }
+        final String confDir = System.getProperty("catalina.base") + "/conf/";
+        final String host = getHost();
+        final String hostKeyFileBasePath =
+            confDir + "hostkey-sftp-" +
+            (host != null ? host + "-" : "") +
+            getPort();
         if (SecurityUtils.isBouncyCastleRegistered()) {
             endpoint.setKeyPairProvider(
-                new PEMGeneratorHostKeyProvider("key.pem"));
+                new PEMGeneratorHostKeyProvider(hostKeyFileBasePath + ".pem")
+            );
         } else {
             endpoint.setKeyPairProvider(
-                new SimpleGeneratorHostKeyProvider("key.ser"));
+                new SimpleGeneratorHostKeyProvider(hostKeyFileBasePath + ".ser")
+            );
         }
         endpoint.setPasswordAuthenticator(new PasswordAuthenticator() {
             // @Override
