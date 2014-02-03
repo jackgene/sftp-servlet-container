@@ -13,6 +13,10 @@ defaultTasks 'clean', 'distZip'
 
 jar {
   baseName = 'coyote-sftp'
+  archiveName = "${baseName}-${version}-with-dependencies.jar"
+  from {
+    configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }
+  }
 }
 
 repositories {
@@ -81,7 +85,7 @@ task distZip(type: Zip, dependsOn: jar) {
   
   into('/copy-to-tomcat-lib') {
     from jar.archivePath 
-    from configurations.runtime into '/copy-to-tomcat-lib'
+//    from configurations.runtime into '/copy-to-tomcat-lib'
   }
 }
 
