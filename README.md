@@ -24,7 +24,7 @@ If the web application does not support WebDAV extensions (this is typical):
 
 (Commands are based on the OpenSSH SFTP client)
 
-* Navigating into directories using "cd" always succeeds, even if the directory does not exist, or is inaccessible.
+3. Navigating into directories using "cd" always succeeds, even if the directory does not exist, or is inaccessible.
 E.g., "cd /WEB-INF" succeeds even though you won't be able to access anything under WEB-INF:
 
 ```
@@ -36,7 +36,7 @@ Couldn't stat remote file: No such file or directory
 
 File "/WEB-INF/web.xml" not found.
 ```
-* All directories appear to be empty except for a WHERE_ARE_MY_FILES.txt.
+4. All directories appear to be empty except for a WHERE_ARE_MY_FILES.txt.
 
 E.g., If you list the files under root, you only see this file listed even though "/index.jsp" may in fact be a valid Servlet resource:
 
@@ -51,7 +51,8 @@ Fetching /index.jsp to index.jsp
 
 /index.jsp                                   100%  7779    7.6KB/s   00:00
 ```
-* You can access resources in a directory using the full path, or by navigating into the directory using "cd" first.
+
+5. You can access resources in a directory using the full path, or by navigating into the directory using "cd" first.
 
 E.g., To access "/foo/bar.gif" you can do:
 
@@ -65,8 +66,7 @@ sftp> cd /foo
 sftp> get bar.gif
 ```
 
-
-* If a path maps to a Servlet resource that is both a file and a directory (this is possible in web applications), you must append a slash (/) to it to navigate to it as a directory. You may access it as a file using the path directly or by appending a slash dot (/.) to it.
+6. If a path maps to a Servlet resource that is both a file and a directory (this is possible in web applications), you must append a slash (/) to it to navigate to it as a directory. You may access it as a file using the path directly or by appending a slash dot (/.) to it.
 
 E.g., If /baz is both a file and a directory, this is how you would access its file contents:
 ```
@@ -94,13 +94,13 @@ and this is how you would list its directory contents:
 sftp> ls /
 ```
 
-* The following commands are not supported:
-  * chgrp
-  * chmod
-  * chown
-  * ln
-  * mkdir
-  * rename
+7. The following commands are not supported:
+   * chgrp
+   * chmod
+   * chown
+   * ln
+   * mkdir
+   * rename
 
 With WebDAV support
 -------------------
