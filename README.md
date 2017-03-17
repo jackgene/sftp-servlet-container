@@ -64,6 +64,8 @@ sftp> cd /foo
 
 sftp> get bar.gif
 ```
+
+
 * If a path maps to a Servlet resource that is both a file and a directory (this is possible in web applications), you must append a slash (/) to it to navigate to it as a directory. You may access it as a file using the path directly or by appending a slash dot (/.) to it.
 
 E.g., If /baz is both a file and a directory, this is how you would access its file contents:
@@ -79,6 +81,8 @@ and this is how you would list its directory contents:
 ```
 sftp> ls /baz/
 ```
+
+
 
 One special case is the root directory, if it's both a file and directory, this is how you would access its file contents:
 ```
@@ -107,11 +111,11 @@ If the web application does support WebDAV extensions, you will be able to acces
 2. You will be able to create directories using mkdir (this is translated into a WebDAV MKCOL operation).
 3. However, you will NOT be able to navigate into arbitrary non-existent directories using "cd" (there is no need to).
 4. The following commands are not supported:
-  * chgrp
-  * chmod
-  * chown
-  * ln
-  * rename
+   * chgrp
+   * chmod
+   * chown
+   * ln
+   * rename
 
 Getting Started
 ===============
